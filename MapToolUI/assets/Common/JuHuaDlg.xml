@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="640,1280">
+  <displayList>
+    <graph id="n1_kb40" name="mask_gray" xy="0,-110" size="640,1500" type="rect" fillColor="#70000000">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <movieclip id="n0_kb40" name="mv_loading" src="kb403" fileName="images/qtm011.jta" xy="276,624">
+      <relation target="" sidePair="center-center,middle-middle"/>
+    </movieclip>
+  </displayList>
+</component>

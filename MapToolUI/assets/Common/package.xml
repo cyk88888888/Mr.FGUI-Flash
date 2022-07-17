@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packageDescription id="g2zhtj9b">
+  <resources>
+    <component id="kb400" name="JuHuaDlg.xml" path="/" exported="true"/>
+    <movieclip id="kb403" name="qtm011.jta" path="/images/"/>
+    <image id="h1du4" name="02.png" path="/images/"/>
+    <component id="h1du6" name="CloseButton.xml" path="/components/" exported="true"/>
+    <image id="jtzd7" name="22.png" path="/images/"/>
+    <component id="jtzd8" name="btnBack.xml" path="/components/" exported="true"/>
+    <component id="pzzla" name="Button1.xml" path="/components/" exported="true"/>
+    <component id="h98zb" name="EmptyComp.xml" path="/components/" exported="true"/>
+    <component id="bvhzc" name="MsgTip.xml" path="/" exported="true"/>
+    <image id="bvhzf" name="background.png" path="/images/" scale="9grid" scale9grid="90,5,180,10"/>
+    <component id="gtatg" name="TestComp.xml" path="/components/" exported="true"/>
+    <component id="h98z1c" name="WindowFrame.xml" path="/components/" exported="true"/>
+    <image id="h98zs" name="5.png" path="/images/" scale="9grid" scale9grid="153,177,306,110"/>
+    <image id="os3c1p" name="8_png.png" path="/images/"/>
+    <component id="os3ch" name="CloseButton1.xml" path="/components/" exported="true"/>
+    <image id="os3ci" name="4.png" path="/images/"/>
+    <component id="os3cj" name="CloseButton2.xml" path="/components/" exported="true"/>
+    <component id="onok1q" name="MsgBoxDlg.xml" path="/" exported="true"/>
+  </resources>
+  <publish name=""/>
+</packageDescription>

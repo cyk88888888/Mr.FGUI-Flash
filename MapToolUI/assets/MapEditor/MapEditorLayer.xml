@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1550,910" designImageLayer="1">
+  <displayList>
+    <graph id="n31_n273" name="n31" xy="0,0" size="1550,910" type="rect" fillColor="#ff999999">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <component id="n1_g4oc" name="mapComp" src="nx961d" fileName="components/MapComp.xml" xy="0,0" size="1033,910"/>
+    <graph id="n23_bfx2" name="n23" xy="1188,581" size="105,36" type="rect"/>
+    <graph id="n26_bfx2" name="n26" xy="1296,581" size="105,36" type="rect"/>
+    <graph id="n9_g4oc" name="n9" xy="1185,619" size="73,41" type="rect"/>
+    <component id="n3_g4oc" name="btn_walk" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1043,9" size="120,36">
+      <Button title="设置可行走"/>
+    </component>
+    <component id="n2_g4oc" name="btn_block" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1043,60" size="120,36">
+      <Button title="设置障碍物"/>
+    </component>
+    <component id="n4_g4oc" name="btn_blockVert" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1043,115" size="164,36">
+      <Button title="设置障碍物顶点"/>
+    </component>
+    <component id="n11_vlox" name="btn_clearWalk" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1202,9" size="172,36">
+      <Button title="清除全部可行走"/>
+    </component>
+    <component id="n12_vlox" name="btn_clearBolck" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1202,60" size="165,36">
+      <Button title="清除全部障碍物"/>
+    </component>
+    <component id="n13_vlox" name="btn_clearBolckVert" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1234,115" size="210,36">
+      <Button title="清除全部障碍物顶点"/>
+    </component>
+    <component id="n19_d7z4" name="btn_water" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1043,167" size="120,36">
+      <Button title="设置水域"/>
+    </component>
+    <component id="n20_d7z4" name="btn_clearWater" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1202,167" size="165,36">
+      <Button title="清除全部水域"/>
+    </component>
+    <component id="n5_g4oc" name="btn_exportJson" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1043,768" size="120,36">
+      <Button title="导出json"/>
+    </component>
+    <component id="n6_g4oc" name="btn_importJson" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1043,713" size="120,36">
+      <Button title="导入json"/>
+    </component>
+    <text id="n7_g4oc" name="n7" xy="1043,625" size="144,29" fontSize="20" color="#ffffff" text="设置格子大小："/>
+    <text id="n8_g4oc" name="txt_cellSize" xy="1189,625" size="60,29" fontSize="20" autoSize="none" singleLine="true" text="" input="true" prompt="40" maxLength="3" restrict="[0-9]" keyboardType="2"/>
+    <component id="n10_g4oc" name="btn_resizeGrid" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1274,621" size="107,36">
+      <Button title="确定"/>
+    </component>
+    <text id="n14_o1cz" name="n14" xy="1043,584" size="144,29" fontSize="20" color="#ffffff" text="设置地图宽高："/>
+    <component id="n22_t19y" name="btn_runDemo" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1187,768" size="115,36">
+      <Button title="测试运行"/>
+    </component>
+    <text id="n24_bfx2" name="txt_mapHeight" xy="1301,585" size="96,29" fontSize="20" autoSize="none" singleLine="true" text="" input="true" prompt="4000" maxLength="8" restrict="[0-9]" keyboardType="2"/>
+    <text id="n25_bfx2" name="txt_mapWidth" xy="1193,585" size="96,29" fontSize="20" autoSize="none" singleLine="true" text="" input="true" prompt="4000" maxLength="8" restrict="[0-9]" keyboardType="2"/>
+    <component id="n27_bfx2" name="btn_resizeMap" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1412,581" size="107,36">
+      <Button title="确定"/>
+    </component>
+    <component id="n28_bfx2" name="btn_toCenter" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1353,711" size="144,36">
+      <Button title="到中心点"/>
+    </component>
+    <component id="n29_bfx2" name="btn_originalScale" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1187,711" size="144,36">
+      <Button title="回到原比例"/>
+    </component>
+    <component id="n30_bfx2" name="btn_clearAll" src="pzzla" fileName="components/Button1.xml" pkg="g2zhtj9b" xy="1190,226" size="165,36">
+      <Button title="清除全部数据"/>
+    </component>
+  </displayList>
+</component>

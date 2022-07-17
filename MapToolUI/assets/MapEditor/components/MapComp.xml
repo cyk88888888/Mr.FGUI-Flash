@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="640,600" overflow="scroll" scroll="both" scrollBarFlags="128" scrollBar="hidden">
+  <displayList>
+    <component id="n10_9szr" name="grp_container" src="9szr1l" fileName="components/MapCompContainer.xml" xy="0,0">
+      <relation target="" sidePair="width-width,height-height"/>
+    </component>
+    <component id="n11_bfx2" name="grp_setSize" src="h98zb" fileName="components/EmptyComp.xml" pkg="g2zhtj9b" xy="0,0"/>
+  </displayList>
+</component>

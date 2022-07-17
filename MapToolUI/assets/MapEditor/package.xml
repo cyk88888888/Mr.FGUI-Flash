@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packageDescription id="1c4i9cbq">
+  <resources>
+    <component id="g4oc0" name="MapEditorLayer.xml" path="/" exported="true"/>
+    <component id="nx961d" name="MapComp.xml" path="/components/" exported="true"/>
+    <component id="mcdl1e" name="LineComp.xml" path="/components/" exported="true"/>
+    <image id="mcdlg" name="black.png" path="/imgs/" exported="true" scale="9grid" scale9grid="7,8,5,3"/>
+    <image id="g4oc2" name="green.png" path="/imgs/" exported="true" scale="9grid" scale9grid="4,4,8,8"/>
+    <image id="g4oc3" name="red.png" path="/imgs/" exported="true" scale="9grid" scale9grid="4,4,8,8"/>
+    <component id="g4oc4" name="GridComp.xml" path="/components/" exported="true"/>
+    <component id="d7z41f" name="MapIR.xml" path="/components/"/>
+    <image id="d7z41i" name="blue.png" path="/imgs/" exported="true"/>
+    <image id="d7z41k" name="redCircle.png" path="/imgs/" exported="true"/>
+    <component id="9szr1l" name="MapCompContainer.xml" path="/components/"/>
+    <component id="os3c1o" name="MapPreviewComp.xml" path="/components/"/>
+    <component id="t19y1q" name="JoystickLayer.xml" path="/" exported="true"/>
+    <image id="t19y1r" name="0.png" path="/imgs/"/>
+    <image id="t19y1s" name="1.png" path="/imgs/"/>
+    <movieclip id="j0gg1u" name="pet.jta" path="/"/>
+    <image id="j0gg1v" name="bg.png" path="/imgs/"/>
+    <image id="j0gg1w" name="joystick.png" path="/imgs/"/>
+  </resources>
+  <publish name=""/>
+</packageDescription>

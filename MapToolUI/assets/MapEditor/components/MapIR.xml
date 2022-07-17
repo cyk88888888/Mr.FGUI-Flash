@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="200,40" extention="Button">
+  <controller name="button" pages="0,up,1,down,2,over,3,selectedOver" selected="0"/>
+  <displayList>
+    <graph id="n14_d7z4" name="selectBg" xy="0,0" size="200,40" type="rect" fillColor="#ff00ffff">
+      <gearDisplay controller="button" pages="1,3"/>
+    </graph>
+    <graph id="n15_d7z4" name="n15" xy="0,0" size="200,40" type="rect" fillColor="#ff666666">
+      <gearDisplay controller="button" pages="0,2"/>
+    </graph>
+    <text id="n16_d7z4" name="title" xy="58,5" size="84,29" fontSize="20" text="地图名称"/>
+  </displayList>
+  <Button mode="Radio"/>
+</component>

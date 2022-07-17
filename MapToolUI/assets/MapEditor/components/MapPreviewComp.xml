@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="100,100" overflow="scroll" scroll="both" scrollBarFlags="128">
+  <displayList>
+    <graph id="n0_os3c" name="holder" xy="0,0" size="100,100"/>
+  </displayList>
+</component>
