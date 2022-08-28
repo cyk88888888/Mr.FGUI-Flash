@@ -68,5 +68,12 @@ package framework.base
 			}
 			return new Point(x, y);
 		}
+		
+		public static function distance(x1:Number,y1:Number,x2:Number,y2:Number):Number{
+			var dx:Number=x1-x2;
+			var dy:Number=y1-y2;
+			var dist:Number=Math.sqrt(dx*dx+dy*dy);
+			return dist;
+		}
 	}
 }

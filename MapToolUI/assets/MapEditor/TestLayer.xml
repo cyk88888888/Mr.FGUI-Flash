@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="1550,910">
+  <displayList>
+    <graph id="n0_pxub" name="n0" xy="0,0" size="1550,910" type="rect">
+      <relation target="" sidePair="width-width,height-height"/>
+    </graph>
+    <component id="n1_pxub" name="grp_container" src="h98zb" fileName="components/EmptyComp.xml" pkg="g2zhtj9b" xy="0,0" size="1550,910"/>
+  </displayList>
+</component>

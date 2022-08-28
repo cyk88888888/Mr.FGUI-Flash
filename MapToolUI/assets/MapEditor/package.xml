@@ -19,6 +19,7 @@
     <movieclip id="j0gg1u" name="pet.jta" path="/"/>
     <image id="j0gg1v" name="bg.png" path="/imgs/"/>
     <image id="j0gg1w" name="joystick.png" path="/imgs/"/>
+    <component id="pxub1x" name="TestLayer.xml" path="/" exported="true"/>
   </resources>
   <publish name=""/>
 </packageDescription>
