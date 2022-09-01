@@ -209,30 +209,50 @@ package fairygui
 				
 				case RelationType.LeftExt_Left:
 				case RelationType.LeftExt_Right:
-					tmp = _owner.xMin;
-					_owner.width = _owner._rawWidth - dx;
-					_owner.xMin = tmp + dx;
+					if(_owner!=_target.parent)
+					{
+						tmp = _owner.xMin;
+						_owner.width = _owner._rawWidth - dx;
+						_owner.xMin = tmp + dx;
+					}
+					else
+						_owner.width = _owner._rawWidth - dx;
 					break;
 				
 				case RelationType.RightExt_Left:
 				case RelationType.RightExt_Right:
-					tmp = _owner.xMin;
-					_owner.width = _owner._rawWidth + dx;
-					_owner.xMin = tmp;
+					if(_owner!=_target.parent)
+					{
+						tmp = _owner.xMin;
+						_owner.width = _owner._rawWidth + dx;
+						_owner.xMin = tmp;
+					}
+					else
+						_owner.width = _owner._rawWidth + dx;
 					break;
 				
 				case RelationType.TopExt_Top:
 				case RelationType.TopExt_Bottom:
-					tmp = _owner.yMin;
-					_owner.height = _owner._rawHeight - dy;
-					_owner.yMin = tmp + dy;
+					if(_owner!=_target.parent)
+					{
+						tmp = _owner.yMin;
+						_owner.height = _owner._rawHeight - dy;
+						_owner.yMin = tmp + dy;
+					}
+					else
+						_owner.height = _owner._rawHeight - dy;
 					break;
 				
 				case RelationType.BottomExt_Top:
 				case RelationType.BottomExt_Bottom:
-					tmp = _owner.yMin;
-					_owner.height = _owner._rawHeight + dy;
-					_owner.yMin = tmp;
+					if(_owner!=_target.parent)
+					{
+						tmp = _owner.yMin;
+						_owner.height = _owner._rawHeight + dy;
+						_owner.yMin = tmp;
+					}
+					else
+						_owner.height = _owner._rawHeight + dy;
 					break;
 			}
 		}
@@ -599,19 +619,23 @@ package fairygui
 		
 		private function __targetSizeChanged(target:GObject):void
 		{
+			if(_owner.relations.sizeDirty)
+				_owner.relations.ensureRelationsSizeCorrect();
+
 			if (_owner.relations.handling!=null)
 			{
 				_targetWidth = _target._width;
 				_targetHeight = _target._height;
 				return;
 			}
-			
+
 			_owner.relations.handling = target;
 			
 			var ox:Number = _owner.x;
 			var oy:Number = _owner.y;
 			var ow:Number = _owner._rawWidth;
 			var oh:Number = _owner._rawHeight;
+			
 			for each(var info:RelationDef in _defs)
 			{
 				applyOnSizeChanged(info);

@@ -1,5 +1,7 @@
 package fairygui.tween
 {
+	import flash.geom.Point;
+
 	public class GTweener
 	{
 		internal var _target:Object;
@@ -18,7 +20,8 @@ package fairygui.tween
 		private var _timeScale:Number;
 		private var _snapping:Boolean;
 		private var _userData:*;
-		
+		private var _path:GPath;
+
 		private var _onUpdate:Function;
 		private var _onStart:Function;
 		private var _onComplete:Function;
@@ -33,6 +36,8 @@ package fairygui.tween
 		private var _ended:int;
 		private var _elapsedTime:Number;
 		private var _normalizedTime:Number;
+		
+		private static var helperPoint:Point = new Point();
 		
 		public function GTweener()
 		{
@@ -109,6 +114,12 @@ package fairygui.tween
 		public function setSnapping(value:Boolean):GTweener
 		{
 			_snapping = value;
+			return this;
+		}
+		
+		public function setPath(value:GPath):GTweener
+		{
+			_path = value;
 			return this;
 		}
 		
@@ -343,6 +354,7 @@ package fairygui.tween
 		{
 			_target = null;
 			_userData = null;
+			_path = null;
 			_onStart = _onUpdate = _onComplete = null;
 		}
 		
@@ -452,6 +464,19 @@ package fairygui.tween
 					_value.y = _startValue.y;
 				}
 			}
+			else if(_path)
+			{
+				_path.getPointAt(_normalizedTime, helperPoint);
+				if (_snapping)
+				{
+					helperPoint.x = Math.round(helperPoint.x);
+					helperPoint.y = Math.round(helperPoint.y);
+				}
+				_deltaValue.x = helperPoint.x - _value.x;
+				_deltaValue.y = helperPoint.y - _value.y;
+				_value.x = helperPoint.x;
+				_value.y = helperPoint.y;
+			}
 			else
 			{
 				for (var i:int = 0; i < _valueSize; i++)
@@ -553,7 +578,7 @@ package fairygui.tween
 				}
 				catch(err:Error)
 				{
-					trace("FairyGUI: error in complete callback > " + err.message);
+					trace("FairyGUI: error in complete callback > " + err.message + "\n" + err.getStackTrace());
 				}
 			}
 		}

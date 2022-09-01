@@ -105,8 +105,13 @@ package fairygui.utils  {
 			}
 		}
 		
+		public function step():void
+		{
+			__timer(null);
+		}
+		
 		private function __timer(evt:TimerEvent):void {
-			time =  getTimer();
+			time = getTimer();
 			workCount++;
 			
 			deltaTime = time-_lastTime;

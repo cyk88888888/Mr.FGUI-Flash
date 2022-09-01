@@ -22,9 +22,11 @@ package fairygui.utils
 		}
 
 		private function readEntries():void {
-			_stream.position = _stream.length - 22;
 			var buf:ByteArray = new ByteArray();
 			buf.endian = Endian.LITTLE_ENDIAN;
+
+			//End of central directory record(EOCD) 
+			_stream.position = _stream.length - 22;
 			_stream.readBytes(buf, 0, 22);
 			buf.position = 10;
 			var entryCount:int = buf.readUnsignedShort();
@@ -37,11 +39,13 @@ package fairygui.utils
 				buf.position = 28;
 				var len:uint = buf.readUnsignedShort();
 				var name:String = _stream.readUTFBytes(len);
-				var len2:int = buf.readUnsignedShort()+buf.readUnsignedShort();
-				_stream.position += len2;
+				var nextEntryPos:int = _stream.position + buf.readUnsignedShort() + buf.readUnsignedShort();
 				var lastChar:String = name.charAt(name.length-1);
 				if(lastChar=="/" || lastChar=="\\")
+				{
+					_stream.position = nextEntryPos;
 					continue;
+				}
 				
 				name = name.replace(/\\/g, "/");
 				var e:ZipEntry = new ZipEntry();
@@ -53,8 +57,15 @@ package fairygui.utils
 				e.size = buf.readUnsignedInt();
 				e.sourceSize = buf.readUnsignedInt();
 				buf.position = 42;
-				e.offset = buf.readUnsignedInt() + 30 + len;
-				
+
+				//local file header 文件头
+				e.offset = buf.readUnsignedInt();
+				_stream.position = e.offset;
+				_stream.readBytes(buf, 0, 30);
+				buf.position = 26;
+				e.offset += buf.readUnsignedShort() + buf.readUnsignedShort() + 30;
+
+				_stream.position = nextEntryPos;
 				_entries[name] = e;
 			}
 		}
@@ -68,9 +79,9 @@ package fairygui.utils
 			if(!entry.size)
 				return ba;
 			
-			_stream.position = entry.offset;			
+			_stream.position = entry.offset;
 			_stream.readBytes(ba, 0, entry.size);
-			if(entry.compress) 
+			if(entry.compress)
 				ba.inflate();
 			
 			return ba;

@@ -15,10 +15,8 @@ package fairygui
 	import fairygui.display.MovieClip;
 	import fairygui.display.UISprite;
 	import fairygui.utils.ToolSet;
-	import fairygui.gears.IAnimationGear;
-	import fairygui.gears.IColorGear;
-
-	public class GLoader extends GObject implements IColorGear, IAnimationGear
+	
+	public class GLoader extends GObject
 	{
 		private var _url:String;
 		private var _align:int;
@@ -223,26 +221,6 @@ package fairygui
 			}
 		}
 		
-		final public function get timeScale():Number
-		{
-			if(_content is fairygui.display.MovieClip)
-				return fairygui.display.MovieClip(_content).timeScale;
-			else
-				return 1;
-		}
-		
-		public function set timeScale(value:Number):void
-		{
-			if(_content is fairygui.display.MovieClip)
-				fairygui.display.MovieClip(_content).timeScale = value;
-		}
-		
-		public function advance(timeInMiniseconds:int):void
-		{
-			if(_content is fairygui.display.MovieClip)
-				fairygui.display.MovieClip(_content).advance(timeInMiniseconds);
-		}
-		
 		final public function get color():uint
 		{
 			return _color;
@@ -325,8 +303,14 @@ package fairygui
 			_contentItem = UIPackage.getItemByURL(itemURL);
 			if(_contentItem!=null)
 			{
+				_contentItem = _contentItem.getBranch();
+				_contentSourceWidth = _contentItem.width;
+				_contentSourceHeight = _contentItem.height;
+
 				if(_autoSize)
-					this.setSize(_contentItem.width, _contentItem.height);
+					this.setSize(_contentSourceWidth, _contentSourceHeight);
+
+				_contentItem = _contentItem.getHighResolution();
 				
 				if(_contentItem.type==PackageItemType.Image)
 				{
@@ -367,8 +351,6 @@ package fairygui
 					{
 						_content2 = obj.asCom;
 						_container.addChild(_content2.displayObject);
-						_contentSourceWidth = _contentItem.width;
-						_contentSourceHeight = _contentItem.height;
 						updateLayout();
 					}
 				}
@@ -398,8 +380,6 @@ package fairygui
 					_container.addChild(_content);
 				Bitmap(_content).bitmapData = pi.image;
 				Bitmap(_content).smoothing = pi.smoothing;
-				_contentSourceWidth = pi.width;
-				_contentSourceHeight = pi.height;
 				updateLayout();
 			}
 		}
@@ -415,14 +395,11 @@ package fairygui
 			else
 				_container.addChild(_content);
 			
-			_contentSourceWidth = pi.width;
-			_contentSourceHeight = pi.height;
-			
 			fairygui.display.MovieClip(_content).interval = pi.interval;
 			fairygui.display.MovieClip(_content).frames = pi.frames;
 			fairygui.display.MovieClip(_content).repeatDelay = pi.repeatDelay;
 			fairygui.display.MovieClip(_content).swing = pi.swing;
-			fairygui.display.MovieClip(_content).boundsRect = new Rectangle(0,0,_contentSourceWidth,_contentSourceHeight);
+			fairygui.display.MovieClip(_content).boundsRect = new Rectangle(0,0,pi.width,pi.height);
 
 			updateLayout();
 		}
@@ -453,9 +430,6 @@ package fairygui
 				else
 					flash.display.MovieClip(_content).gotoAndStop(_frame+1);
 			}
-			
-			_contentSourceWidth = _content.width;
-			_contentSourceHeight = _content.height;
 
 			updateLayout();
 		}
@@ -558,7 +532,8 @@ package fairygui
 			
 			_contentWidth = _contentSourceWidth;
 			_contentHeight = _contentSourceHeight;
-			
+			var sx:Number = 1, sy:Number = 1;
+
 			if(_autoSize)
 			{
 				_updatingLayout = true;
@@ -574,20 +549,24 @@ package fairygui
 					if(_content2!=null)
 					{
 						_content2.setXY(0, 0);
-						_content2.setScale(1, 1);
+						_content2.setScale(sx, sy);
 					}
 					else
 					{
 						_content.x = 0;
 						_content.y = 0;
-						_content.scaleX = 1;
-						_content.scaleY = 1;
+						if(_content is Bitmap)
+						{
+							sx = _contentSourceWidth / _content.width;
+							sy = _contentSourceHeight / _content.height;
+						}
+						_content.scaleX = sx;
+						_content.scaleY = sy;
 					}
 					return;
 				}
 			}
-				
-			var sx:Number = 1, sy:Number = 1;
+
 			if(_fill!=LoaderFillType.None)
 			{
 				sx = _width/_contentSourceWidth;
@@ -637,8 +616,8 @@ package fairygui
 			}
 			else
 			{
-				_content.scaleX =  sx;
-				_content.scaleY =  sy;
+				_content.scaleX = sx;
+				_content.scaleY = sy;
 			}
 			
 			var nx:Number, ny:Number;
@@ -706,42 +685,29 @@ package fairygui
 			if(source==null)
 				return;
 			
-			if(_contentItem.scale9Grid!=null)
+			if(_contentItem.scale9Grid!=null || _contentItem.scaleByTile)
 			{
 				_content.scaleX = 1;
 				_content.scaleY = 1;
+				var sx:Number = _contentItem.width/_contentSourceWidth;
+				var sy:Number = _contentItem.height/_contentSourceHeight;
+				var w:int = _contentWidth * sx;
+				var h:int = _contentHeight * sy;
 				
 				var oldBmd:BitmapData = Bitmap(_content).bitmapData;
 				var newBmd:BitmapData;
 				
-				if(source.width==_contentWidth && source.height==_contentHeight)
+				if(source.width==w && source.height==h)
 					newBmd = source;
-				else if(_contentWidth==0 || _contentHeight==0)
+				else if(w==0 || h==0)
 					newBmd = null;
-				else
+				else if(_contentItem.scale9Grid!=null)
+				{
 					newBmd = ToolSet.scaleBitmapWith9Grid(source, 
-						_contentItem.scale9Grid, _contentWidth, _contentHeight, _contentItem.smoothing, _contentItem.tileGridIndice);
-				
-				if(oldBmd!=newBmd)
-				{
-					if(oldBmd && oldBmd!=source)
-						oldBmd.dispose();
-					Bitmap(_content).bitmapData = newBmd;
+						_contentItem.scale9Grid, w, h, _contentItem.smoothing, _contentItem.tileGridIndice);
 				}
-			}
-			else if(_contentItem.scaleByTile)
-			{
-				_content.scaleX = 1;
-				_content.scaleY = 1;
-				
-				oldBmd = Bitmap(_content).bitmapData;
-				
-				if(source.width==_contentWidth && source.height==_contentHeight)
-					newBmd = source;
-				else if(_contentWidth==0 || _contentHeight==0)
-					newBmd = null;
 				else
-					newBmd = ToolSet.tileBitmap(source, source.rect, _contentWidth, _contentHeight);
+					newBmd = ToolSet.tileBitmap(source, source.rect, w, h);
 				
 				if(oldBmd!=newBmd)
 				{
@@ -749,14 +715,64 @@ package fairygui
 						oldBmd.dispose();
 					Bitmap(_content).bitmapData = newBmd;
 				}
+
+				Bitmap(_content).width = _contentWidth;
+				Bitmap(_content).height = _contentHeight;
 			}
 			else
 			{
-				_content.scaleX = _contentWidth/_contentSourceWidth;
-				_content.scaleY = _contentHeight/_contentSourceHeight;
+				_content.scaleX = _contentWidth/source.width;
+				_content.scaleY = _contentHeight/source.height;
 			}
 		}
 		
+		override public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					return this.color;
+				case ObjectPropID.Playing:
+					return this.playing;
+				case ObjectPropID.Frame:
+					return this.frame;
+				case ObjectPropID.TimeScale:
+					if(_content is fairygui.display.MovieClip)
+						return fairygui.display.MovieClip(_content).timeScale;
+					else
+						return 1;
+				default:
+					return super.getProp(index);
+			}
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					this.color = value;
+					break;
+				case ObjectPropID.Playing:
+					this.playing = value;
+					break;
+				case ObjectPropID.Frame:
+					this.frame = value;
+					break;
+				case ObjectPropID.TimeScale:
+					if(_content is fairygui.display.MovieClip)
+						fairygui.display.MovieClip(_content).timeScale = value;
+					break;
+				case ObjectPropID.DeltaTime:
+					if(_content is fairygui.display.MovieClip)
+						fairygui.display.MovieClip(_content).advance(value);
+					break;
+				default:
+					super.setProp(index, value);
+					break;
+			}
+		}
+
 		override public function setup_beforeAdd(xml:XML):void
 		{
 			super.setup_beforeAdd(xml);

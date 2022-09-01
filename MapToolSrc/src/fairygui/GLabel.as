@@ -1,9 +1,8 @@
 package fairygui
 {
 	import fairygui.utils.ToolSet;
-	import fairygui.gears.IColorGear;
 	
-	public class GLabel extends GComponent implements IColorGear
+	public class GLabel extends GComponent
 	{
 		protected var _titleObject:GObject;
 		protected var _iconObject:GObject;
@@ -86,16 +85,6 @@ package fairygui
 				tf.fontSize = value;
 		}
 		
-		public function get color():uint
-		{
-			return this.titleColor;
-		}
-		
-		public function set color(value:uint):void 
-		{
-			this.titleColor = value;
-		}
-		
 		public function set editable(val:Boolean):void
 		{
 			var tf:GTextField = getTextField();
@@ -124,6 +113,50 @@ package fairygui
 				return null;
 		}
 		
+		override public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					return this.titleColor;
+				case ObjectPropID.OutlineColor:
+					{
+						var tf:GTextField = getTextField();
+						if(tf)
+							return tf.strokeColor;
+						else
+							return 0;
+					}
+				case ObjectPropID.FontSize:
+					return this.titleFontSize;
+				default:
+					return super.getProp(index);
+			}
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					this.titleColor = value;
+					break;
+				case ObjectPropID.OutlineColor:
+					{
+						var tf:GTextField = getTextField();
+						if(tf)
+							tf.strokeColor = value;
+					}
+					break;
+				case ObjectPropID.FontSize:
+					this.titleFontSize = value;
+					break;
+				default:
+					super.setProp(index, value);
+					break;
+			}
+		}
+
 		override protected function constructFromXML(xml:XML):void
 		{
 			super.constructFromXML(xml);

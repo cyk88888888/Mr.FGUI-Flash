@@ -1,5 +1,10 @@
 package fairygui
 {
+	import fairygui.display.UIDisplayObject;
+	import fairygui.event.GTouchEvent;
+	import fairygui.event.ItemEvent;
+	import fairygui.utils.GTimers;
+
 	import flash.display.DisplayObject;
 	import flash.display.Sprite;
 	import flash.display.Stage;
@@ -7,23 +12,19 @@ package fairygui
 	import flash.events.MouseEvent;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
-	
-	import fairygui.display.UIDisplayObject;
-	import fairygui.event.GTouchEvent;
-	import fairygui.event.ItemEvent;
-	import fairygui.utils.GTimers;
 
 	[Event(name = "itemClick", type = "fairygui.event.ItemEvent")]
 	public class GList extends GComponent
 	{
 		/**
-		 * itemRenderer(index:int, item:GObject);
+		 * itemRenderer(index:int, item:GObject):void;
 		 */
 		public var itemRenderer:Function;
 		/**
 		 * itemProvider(index:int):String;
 		 */
 		public var itemProvider:Function;
+
 		public var scrollItemToViewOnClick:Boolean;
 		public var foldInvisibleItems:Boolean;
 		
@@ -275,7 +276,7 @@ package fairygui
 			var ret:GObject = _pool.getObject(url);
 			if(ret!=null)
 				ret.visible = true;
-			return ret;			
+			return ret;
 		}
 		
 		public function returnToPool(obj:GObject):void
@@ -287,7 +288,7 @@ package fairygui
 		{
 			super.addChildAt(child, index);
 			
-			if(child is GButton)
+			if((child is GButton) && _selectionMode!=ListSelectionMode.None)
 			{
 				var button:GButton = GButton(child);
 				button.selected = false;
@@ -344,7 +345,7 @@ package fairygui
 		}
 
 		public function get selectedIndex():int
-		{			
+		{
 			var i:int;
 			if (_virtual)
 			{
@@ -387,9 +388,10 @@ package fairygui
 				clearSelection();
 		}
 		
-		public function getSelection():Vector.<int>
+		public function getSelection(result:Vector.<int>=null):Vector.<int>
 		{
-			var ret:Vector.<int> = new Vector.<int>();
+			if(result==null)
+				result = new Vector.<int>();
 			var i:int;
 			if (_virtual)
 			{
@@ -402,10 +404,10 @@ package fairygui
 						if (_loop)
 						{
 							var j:int = i % _numItems;
-							if (ret.indexOf(j)!=-1)
+							if (result.indexOf(j)!=-1)
 								continue;
 						}
-						ret.push(i);
+						result.push(i);
 					}
 				}
 			}
@@ -416,10 +418,10 @@ package fairygui
 				{
 					var obj:GButton = _children[i].asButton;
 					if (obj != null && obj.selected)
-						ret.push(i);
+						result.push(i);
 				}
 			}
-			return ret;
+			return result;
 		}
 		
 		public function addSelection(index:int, scrollItToView:Boolean=false):void
@@ -525,7 +527,7 @@ package fairygui
 						obj.selected = false;
 				}
 			}
-		}	
+		}
 			
 		public function selectAll():void
 		{
@@ -657,7 +659,7 @@ package fairygui
 					if (_layout == ListLayoutType.SingleRow || _layout == ListLayoutType.FlowHorizontal || _layout == ListLayoutType.Pagination)
 					{
 						index++;
-						if(index<_children.length)
+						if(index<this.numItems)
 						{
 							clearSelection();
 							addSelection(index, true);
@@ -695,7 +697,7 @@ package fairygui
 					if(_layout==ListLayoutType.SingleColumn || _layout==ListLayoutType.FlowVertical)
 					{
 						index++;
-						if(index<_children.length)
+						if(index<this.numItems)
 						{
 							clearSelection();
 							addSelection(index, true);
@@ -811,7 +813,12 @@ package fairygui
 			ie.stageX = evt.stageX;
 			ie.stageY = evt.stageY;
 			ie.clickCount = evt.clickCount;
-			this.dispatchEvent(ie);
+			dispatchItemEvent(ie);
+		}
+
+		protected function dispatchItemEvent(evt:ItemEvent):void
+		{
+			this.dispatchEvent(evt);
 		}
 		
 		private function __rightClickItem(evt:MouseEvent):void
@@ -827,7 +834,7 @@ package fairygui
 			ie.stageX = evt.stageX;
 			ie.stageY = evt.stageY;
 			ie.rightButton = true;
-			this.dispatchEvent(ie);
+			dispatchItemEvent(ie);
 		}
 		
 		private function setSelectionOnEvent(item:GObject):void
@@ -1099,7 +1106,8 @@ package fairygui
 						ii.width, ii.height);
 				}
 				
-				setFirst = true;//因为在可变item大小的情况下，只有设置在最顶端，位置才不会因为高度变化而改变，所以只能支持setFirst=true
+				if(this.itemProvider!=null)
+					setFirst = true;//因为在可变item大小的情况下，只有设置在最顶端，位置才不会因为高度变化而改变，所以只能支持setFirst=true
 				if (_scrollPane != null)
 					_scrollPane.scrollToView(rect, ani, setFirst);
 			}
@@ -1826,7 +1834,7 @@ package fairygui
 			if (deltaSize != 0 || firstItemDeltaSize != 0)
 				_scrollPane.changeContentSizeOnScrolling(0, deltaSize, 0, firstItemDeltaSize);
 			
-			if (curIndex > 0 && this.numChildren > 0 && _container.y < 0 && getChildAt(0).y > -_container.y)//最后一页没填满！
+			if (curIndex > 0 && this.numChildren > 0 && _container.y <= 0 && getChildAt(0).y > -_container.y)//最后一页没填满！
 				return true;
 			else
 				return false;
@@ -2000,7 +2008,7 @@ package fairygui
 			if (deltaSize != 0 || firstItemDeltaSize != 0)
 				_scrollPane.changeContentSizeOnScrolling(deltaSize, 0, firstItemDeltaSize, 0);
 			
-			if (curIndex > 0 && this.numChildren > 0 && _container.x < 0 && getChildAt(0).x > - _container.x)//最后一页没填满！
+			if (curIndex > 0 && this.numChildren > 0 && _container.x <= 0 && getChildAt(0).x > - _container.x)//最后一页没填满！
 				return true;
 			else
 				return false;
@@ -2312,8 +2320,24 @@ package fairygui
 					if(child.width>maxWidth)
 						maxWidth = child.width;
 				}
-				cw = Math.ceil(maxWidth);
 				ch = curY;
+
+				if(ch<=viewHeight && _autoResizeItem && _scrollPane && _scrollPane._displayInDemand && _scrollPane.vtScrollBar)
+				{
+					viewWidth += _scrollPane.vtScrollBar.width;
+					for(i=0;i<cnt;i++)
+					{
+						child = getChildAt(i);
+						if (foldInvisibleItems && !child.visible)
+							continue;
+
+						child.setSize(viewWidth, child.height, true);
+						if(child.width>maxWidth)
+							maxWidth = child.width;
+					}
+				}
+
+				cw = Math.ceil(maxWidth);
 			}
 			else if(_layout==ListLayoutType.SingleRow)
 			{
@@ -2333,6 +2357,22 @@ package fairygui
 						maxHeight = child.height;
 				}
 				cw = curX;
+
+				if(cw<=viewWidth && _autoResizeItem && _scrollPane && _scrollPane._displayInDemand && _scrollPane.hzScrollBar)
+				{
+					viewHeight += _scrollPane.hzScrollBar.height;
+					for(i=0;i<cnt;i++)
+					{
+						child = getChildAt(i);
+						if (foldInvisibleItems && !child.visible)
+							continue;
+
+						child.setSize(child.width, viewHeight, true);
+						if(child.height>maxHeight)
+							maxHeight = child.height;
+					}
+				}
+
 				ch = Math.ceil(maxHeight);
 			}
 			else if(_layout==ListLayoutType.FlowHorizontal)
@@ -2724,7 +2764,20 @@ package fairygui
 						_apexIndex = parseInt(str);
 				}
 			}
-			
+
+			str = xml.@scrollItemToViewOnClick;
+			if(str)
+				scrollItemToViewOnClick = str=="true";
+			str = xml.@foldInvisibleItems;
+			if(str)
+				foldInvisibleItems = str=="true";
+
+			readItems(xml);
+		}
+
+		protected function readItems(xml:XML):void
+		{
+			var str:String;
 			var col:XMLList = xml.item;
 			for each(var cxml:XML in col)
 			{
@@ -2738,35 +2791,52 @@ package fairygui
 				if(obj!=null)
 				{
 					addChild(obj);
-					str = cxml.@title;
-					if(str)
-						obj.text = str;
-					str = cxml.@icon;
-					if(str)
-						obj.icon = str;
-					str = cxml.@name;
-					if(str)
-						obj.name = str;
-					str = cxml.@selectedIcon;
-					if(str && (obj is GButton))
-						GButton(obj).selectedIcon = str;
-					str = cxml.@selectedTitle;
-					if(str && (obj is GButton))
-						GButton(obj).selectedTitle = str;
-					if(obj is GComponent)
+					setupItem(cxml, obj);
+				}
+			}
+		}
+
+		protected function setupItem(cxml:XML, obj:GObject):void
+		{
+			var str:String;
+			str = cxml.@title;
+			if(str)
+				obj.text = str;
+			str = cxml.@icon;
+			if(str)
+				obj.icon = str;
+			str = cxml.@name;
+			if(str)
+				obj.name = str;
+			str = cxml.@selectedIcon;
+			if(str && (obj is GButton))
+				GButton(obj).selectedIcon = str;
+			str = cxml.@selectedTitle;
+			if(str && (obj is GButton))
+				GButton(obj).selectedTitle = str;
+			if(obj is GComponent)
+			{
+				str = cxml.@controllers;
+				if(str)
+				{
+					var arr:Array = str.split(",");
+					for(var j:int=0;j<arr.length;j+=2)
 					{
-						str = cxml.@controllers;
-						if(str)
-						{
-							arr = str.split(",");
-							for(var j:int=0;j<arr.length;j+=2)
-							{
-								var cc:Controller = GComponent(obj).getController(arr[j]);
-								if(cc!=null)
-									cc.selectedPageId = arr[j+1];
-							}
-						}
+						var cc:Controller = GComponent(obj).getController(arr[j]);
+						if(cc!=null)
+							cc.selectedPageId = arr[j+1];
 					}
+				}
+
+				var col:XMLList = cxml.property;
+				for each(var dxml:XML in col)
+				{
+					var target:String = dxml.@target;
+					var propertyId:int = parseInt(dxml.@propertyId);
+					var value:String = dxml.@value;
+					var obj2:GObject = GComponent(obj).getChildByPath(target);
+					if(obj2)
+						obj2.setProp(propertyId, value);
 				}
 			}
 		}

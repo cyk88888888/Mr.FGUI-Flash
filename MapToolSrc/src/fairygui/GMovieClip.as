@@ -5,17 +5,14 @@ package fairygui
 	
 	import fairygui.display.UIMovieClip;
 	import fairygui.utils.ToolSet;
-	import fairygui.gears.IAnimationGear;
-	import fairygui.gears.IColorGear;
 	
-	public class GMovieClip extends GObject implements IAnimationGear, IColorGear
+	public class GMovieClip extends GObject
 	{	
 		private var _movieClip:UIMovieClip;
 		private var _color:uint;
 		
 		public function GMovieClip()
 		{
-			_sizeImplType = 1;
 			_color = 0xFFFFFF;
 		}
 		
@@ -119,29 +116,95 @@ package fairygui
 
 		override public function constructFromResource():void
 		{
-			sourceWidth = packageItem.width;
-			sourceHeight = packageItem.height;
+			var displayItem:PackageItem = packageItem.getBranch();
+
+			sourceWidth = displayItem.width;
+			sourceHeight = displayItem.height;
 			initWidth = sourceWidth;
 			initHeight = sourceHeight;
 
 			setSize(sourceWidth, sourceHeight);
-			
-			if(packageItem.loaded)
-				__movieClipLoaded(packageItem);
+
+			displayItem = displayItem.getHighResolution();
+			if(displayItem.loaded)
+				__movieClipLoaded(displayItem);
 			else
-				packageItem.owner.addItemCallback(packageItem, __movieClipLoaded);
+				displayItem.owner.addItemCallback(displayItem, __movieClipLoaded);
 		}
 		
 		private function __movieClipLoaded(pi:PackageItem):void
 		{
-			_movieClip.interval = packageItem.interval;
-			_movieClip.swing = packageItem.swing;
-			_movieClip.repeatDelay = packageItem.repeatDelay;
-			_movieClip.frames = packageItem.frames;
+			_movieClip.interval = pi.interval;
+			_movieClip.swing = pi.swing;
+			_movieClip.repeatDelay = pi.repeatDelay;
+			_movieClip.frames = pi.frames;
 			_movieClip.boundsRect = new Rectangle(0, 0, sourceWidth, sourceHeight);
-			_movieClip.smoothing = packageItem.smoothing;
+			_movieClip.smoothing = pi.smoothing;
+
+			handleSizeChanged();
 		}
 
+		override protected function handleSizeChanged():void
+		{
+			handleScaleChanged();
+		}
+		
+		override protected function handleScaleChanged():void
+		{
+			if(_movieClip.boundsRect)
+			{
+				_displayObject.scaleX = _width/_movieClip.boundsRect.width*_scaleX;
+				_displayObject.scaleY = _height/_movieClip.boundsRect.height*_scaleY;
+			}
+			else
+			{
+				_displayObject.scaleX = _scaleX;
+				_displayObject.scaleY = _scaleY;
+			}
+		}
+
+		override public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					return this.color;
+				case ObjectPropID.Playing:
+					return this.playing;
+				case ObjectPropID.Frame:
+					return this.frame;
+				case ObjectPropID.TimeScale:
+					return this.timeScale;
+				default:
+					return super.getProp(index);
+			}
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					this.color = value;
+					break;
+				case ObjectPropID.Playing:
+					this.playing = value;
+					break;
+				case ObjectPropID.Frame:
+					this.frame = value;
+					break;
+				case ObjectPropID.TimeScale:
+					this.timeScale = value;
+					break;
+				case ObjectPropID.DeltaTime:
+					this.advance(value);
+					break;
+				default:
+					super.setProp(index, value);
+					break;
+			}
+		}
+		
 		override public function setup_beforeAdd(xml:XML):void
 		{
 			super.setup_beforeAdd(xml);

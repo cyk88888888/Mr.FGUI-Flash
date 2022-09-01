@@ -46,7 +46,7 @@ package fairygui.tween
 		
 		public static function kill(target:Object, complete:Boolean=false, propType:Object=null):void
 		{
-			TweenManager.killTweens(target, false, null);
+			TweenManager.killTweens(target, complete, null);
 		}
 		
 		public static function getTween(target:Object, propType:Object=null):GTweener

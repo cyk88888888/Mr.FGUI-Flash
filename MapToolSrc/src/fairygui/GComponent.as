@@ -12,13 +12,13 @@ package fairygui
 	import fairygui.utils.GTimers;
 	import fairygui.utils.PixelHitTest;
 	import fairygui.utils.PixelHitTestData;
+	import fairygui.utils.ToolSet;
 
 	[Event(name = "dropEvent", type = "fairygui.event.DropEvent")]
 	public class GComponent extends GObject
 	{
 		private var _sortingChildCount:int;
 		private var _opaque:Boolean;
-		private var _hitArea:PixelHitTest;
 		private var _applyingController:Controller;
 		
 		protected var _margin:Margin;
@@ -49,7 +49,7 @@ package fairygui
 		{
 			_rootContainer = new UISprite(this);
 			_rootContainer.mouseEnabled = false;
-			setDisplayObject(_rootContainer);			
+			setDisplayObject(_rootContainer);
 			_container = _rootContainer;
 		}
 		
@@ -85,10 +85,6 @@ package fairygui
 			return _container;
 		}
 		
-		public function get children():Vector.<GObject>{
-			return _children;
-		}
-		
 		public function addChild(child:GObject):GObject
 		{
 			addChildAt(child, _children.length);
@@ -100,9 +96,7 @@ package fairygui
 			if(!child)
 				throw new Error("child is null");
 
-			var numChildren:int = _children.length; 
-			
-			if (index >= 0 && index <= numChildren)
+			if (index >= 0 && index <= _children.length)
 			{
 				if (child.parent == this)
 				{
@@ -131,6 +125,8 @@ package fairygui
 						_children.splice(index, 0, child);
 					
 					childStateChanged(child);
+					if(child.group)
+						child.group.setBoundsChangedFlag();
 					setBoundsChangedFlag();
 				}
 
@@ -179,7 +175,6 @@ package fairygui
 					_sortingChildCount--;
 				
 				_children.splice(index, 1);
-				child.group = null;
 				if(child.inContainer)
 				{
 					_container.removeChild(child.displayObject);
@@ -188,9 +183,15 @@ package fairygui
 						GTimers.inst.callLater(buildNativeDisplayList);
 				}
 				
+				if(child.group)
+				{
+					child.group.setBoundsChangedFlag();
+					child.group = null;
+				}
+				
 				if(dispose)
 					child.dispose();
-				
+
 				setBoundsChangedFlag();
 				
 				return child;
@@ -228,6 +229,37 @@ package fairygui
 			}
 			
 			return null;
+		}
+
+		public function getChildByPath(path:String):GObject
+		{
+			var arr:Array = path.split(".");
+			var cnt:int = arr.length;
+			var gcom:GComponent = this;
+			var obj:GObject;
+			for (var i:int=0; i<cnt; ++i)
+			{
+				obj = gcom.getChild(arr[i]);
+				if(!obj)
+					break;
+
+				if(i!=cnt-1)
+				{
+					gcom = obj as GComponent;
+					if(!gcom)
+					{
+						obj = null;
+						break;
+					}
+				}
+			}
+			
+			return obj;
+		}
+		
+		public function getChildren():Vector.<GObject>
+		{
+			return _children.concat();
 		}
 		
 		public function getVisibleChild(name:String):GObject
@@ -385,6 +417,13 @@ package fairygui
 			setChildIndex(child2, index1);
 		}
 
+		public function sortChildren(compareFunction:Function):void
+		{
+			_children.sort(compareFunction);
+			buildNativeDisplayList();
+			setBoundsChangedFlag();
+		}
+
 		final public function get numChildren():int 
 		{ 
 			return _children.length; 
@@ -476,7 +515,7 @@ package fairygui
 			{
 				if(!child.displayObject.parent)
 				{
-					var index:int;				
+					var index:int;
 					if (_childrenRenderOrder == ChildrenRenderOrder.Ascent)
 					{
 						for (i = 0; i < cnt; i++)
@@ -557,13 +596,14 @@ package fairygui
 				
 				case ChildrenRenderOrder.Arch:
 					{
-						for (i = 0; i < _apexIndex; i++)
+						var apex:int = ToolSet.clamp(_apexIndex, 0, cnt);
+						for (i = 0; i < apex; i++)
 						{
 							child = _children[i];
 							if (child.displayObject != null && child.internalVisible)
 								_container.addChild(child.displayObject);
 						}
-						for (i = cnt - 1; i >= _apexIndex; i--)
+						for (i = cnt - 1; i >= apex; i--)
 						{
 							child = _children[i];
 							if (child.displayObject != null && child.internalVisible)
@@ -689,24 +729,23 @@ package fairygui
 					updateOpaque();
 				else
 					_rootContainer.graphics.clear();
-				_rootContainer.mouseEnabled = this.touchable && (_opaque || _hitArea!=null);
+				_rootContainer.mouseEnabled = this.touchable && (_opaque || _rootContainer.hitArea!=null);
 			}
 		}
 		
-		final public function get hitArea():PixelHitTest
+		final public function get hitArea():Sprite
 		{
-			return _hitArea;
+			return _rootContainer.hitArea;
 		}
 		
-		public function set hitArea(value:PixelHitTest):void
+		public function set hitArea(value:Sprite):void
 		{
 			if(_rootContainer.hitArea!=null)
 				_rootContainer.removeChild(_rootContainer.hitArea);
 
-			_hitArea = value;
-			if(_hitArea!=null)
+			if(value!=null)
 			{
-				_rootContainer.hitArea = _hitArea.createHitAreaSprite();
+				_rootContainer.hitArea = value;
 				_rootContainer.addChild(_rootContainer.hitArea);
 				_rootContainer.mouseChildren = false;
 			}
@@ -715,13 +754,13 @@ package fairygui
 				_rootContainer.hitArea = null;
 				_rootContainer.mouseChildren = this.touchable;
 			}
-			_rootContainer.mouseEnabled = this.touchable && (_opaque || _hitArea!=null);
+			_rootContainer.mouseEnabled = this.touchable && (_opaque || value!=null);
 		}
 		
 		internal function handleTouchable(val:Boolean):void
 		{
-			_rootContainer.mouseEnabled = val && (_opaque || _hitArea!=null);
-			_rootContainer.mouseChildren = val && _hitArea==null;
+			_rootContainer.mouseEnabled = val && (_opaque || _rootContainer.hitArea!=null);
+			_rootContainer.mouseChildren = val && _rootContainer.hitArea==null;
 		}
 		
 		public function get margin():Margin
@@ -972,7 +1011,7 @@ package fairygui
 			_boundsChanged = false;
 
 			if(_scrollPane)
-				_scrollPane.setContentSize(Math.round(ax+aw),  Math.round(ay+ah));
+				_scrollPane.setContentSize(Math.round(ax+aw), Math.round(ay+ah));
 		}
 		
 		public function get viewWidth():int
@@ -1020,7 +1059,7 @@ package fairygui
 				return resultPoint;
 			}
 			
-			ensureBoundsCorrect();			
+			ensureBoundsCorrect();
 			
 			var obj:GObject = null;
 			var prev:GObject;
@@ -1117,7 +1156,9 @@ package fairygui
 		
 		internal function constructFromResource2(objectPool:Vector.<GObject>, poolIndex:int):void
 		{
-			var xml:XML = packageItem.owner.getComponentData(packageItem);
+			var contentItem:PackageItem = packageItem.getBranch();
+
+			var xml:XML = contentItem.owner.getComponentData(contentItem);
 			
 			var str:String;
 			var arr:Array;
@@ -1155,15 +1196,6 @@ package fairygui
 			if(str!="false")
 				this.opaque = true;
 			
-			str = xml.@hitTest;
-			if(str)
-			{
-				arr = str.split(",");
-				var hitTestData:PixelHitTestData = packageItem.owner.getPixelHitTestData(arr[0]);
-				if (hitTestData != null)
-					this.hitArea = new PixelHitTest(hitTestData, parseInt(arr[1]), parseInt(arr[2]));
-			}
-			
 			var overflow:int;
 			str = xml.@overflow;
 			if(str)
@@ -1173,7 +1205,7 @@ package fairygui
 			
 			str = xml.@margin;
 			if(str)
-				_margin.parse(str);			
+				_margin.parse(str);
 			
 			if(overflow==OverflowType.Scroll)
 			{
@@ -1235,8 +1267,8 @@ package fairygui
 				controller.setup(cxml);
 			}
 
-			var child:GObject;			
-			var displayList:Vector.<DisplayListItem> = packageItem.displayList;
+			var child:GObject;
+			var displayList:Vector.<DisplayListItem> = contentItem.displayList;
 			var childCount:int = displayList.length;
 			var i:int;
 			for (i = 0; i < childCount; i++)
@@ -1277,6 +1309,24 @@ package fairygui
 			if(str)
 				this.mask = getChildById(str).displayObject;
 
+			str = xml.@hitTest;
+			if(str)
+			{
+				arr = str.split(",");
+				if(arr.length==1)
+				{
+					child = getChildById(str);
+					if(child)
+						this.hitArea = Sprite(child.displayObject);
+				}
+				else
+				{
+					var hitTestData:PixelHitTestData = contentItem.owner.getPixelHitTestData(arr[0]);
+					if (hitTestData != null)
+						this.hitArea = new PixelHitTest(hitTestData, parseInt(arr[1]), parseInt(arr[2])).createHitAreaSprite();
+				}
+			}
+			
 			col = xml.transition;
 			var trans:Transition;
 			for each(cxml in col)
@@ -1331,6 +1381,17 @@ package fairygui
 					if(cc)
 						cc.selectedPageId = arr[i+1];
 				}
+			}
+
+			var col:XMLList = xml.property;
+			for each(var cxml:XML in col)
+			{
+				var target:String = cxml.@target;
+				var propertyId:int = parseInt(cxml.@propertyId);
+				var value:String = cxml.@value;
+				var obj:GObject = getChildByPath(target);
+				if(obj)
+					obj.setProp(propertyId, value);
 			}
 		}
 		

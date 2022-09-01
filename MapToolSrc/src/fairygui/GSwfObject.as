@@ -5,9 +5,8 @@ package fairygui
 	import flash.display.Sprite;
 	
 	import fairygui.display.UISprite;
-	import fairygui.gears.IAnimationGear;
 	
-	public class GSwfObject extends GObject implements IAnimationGear
+	public class GSwfObject extends GObject
 	{
 		protected var _container:Sprite;
 		protected var _content:DisplayObject;
@@ -17,7 +16,6 @@ package fairygui
 		public function GSwfObject()
 		{
 			_playing = true;
-			_sizeImplType = 1;
 		}
 		
 		override protected function createDisplayObject():void
@@ -72,22 +70,7 @@ package fairygui
 				updateGear(5);
 			}
 		}
-		
-		final public function get timeScale():Number
-		{
-			return 1;
-		}
-		
-		public function set timeScale(value:Number):void
-		{
-			//not supported.
-		}
-		
-		public function advance(timeInMiniseconds:int):void
-		{
-			//not supported.
-		}
-		
+
 		override public function dispose():void
 		{
 			packageItem.owner.removeItemCallback(packageItem, __swfLoaded);
@@ -130,6 +113,46 @@ package fairygui
 					MovieClip(_content).gotoAndPlay(_frame+1);
 				else
 					MovieClip(_content).gotoAndStop(_frame+1);
+			}
+		}
+		
+		override protected function handleSizeChanged():void
+		{
+			handleScaleChanged();
+		}
+		
+		override protected function handleScaleChanged():void
+		{
+			_displayObject.scaleX = _width/sourceWidth*_scaleX;
+			_displayObject.scaleY = _height/sourceHeight*_scaleY;
+		}
+
+		override public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Playing:
+					return this.playing;
+				case ObjectPropID.Frame:
+					return this.frame;
+				default:
+					return super.getProp(index);
+			}
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Playing:
+					this.playing = value;
+					break;
+				case ObjectPropID.Frame:
+					this.frame = value;
+					break;
+				default:
+					super.setProp(index, value);
+					break;
 			}
 		}
 		

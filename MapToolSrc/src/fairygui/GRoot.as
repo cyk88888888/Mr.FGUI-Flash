@@ -16,7 +16,6 @@ package fairygui
 	
 	import fairygui.display.UIDisplayObject;
 	import fairygui.event.FocusChangeEvent;
-	import fairygui.utils.ToolSet;
 	
 	[Event(name = "focusChanged", type = "fairygui.event.FocusChangeEvent")]
 	public class GRoot extends GComponent
@@ -47,6 +46,7 @@ package fairygui
 		public static var touchPointInput:Boolean;
 		public static var eatUIEvents:Boolean;
 		public static var contentScaleFactor:Number = 1;
+		public static var contentScaleLevel:int = 0;
 		
 		public static function get inst():GRoot
 		{
@@ -88,7 +88,7 @@ package fairygui
 			
 			applyScaleFactor();
 		}
-		
+
 		private function applyScaleFactor():void
 		{
 			var screenWidth:int = _nativeStage.stageWidth;
@@ -108,7 +108,7 @@ package fairygui
 				var tmp:int = dx;
 				dx = dy;
 				dy = tmp;
-			}			
+			}
 			
 			if (_screenMatchMode == ScreenMatchMode.MatchWidthOrHeight)
 			{
@@ -124,6 +124,25 @@ package fairygui
 			this.setSize(Math.round(screenWidth/contentScaleFactor),Math.round(screenHeight/contentScaleFactor));
 			this.scaleX = contentScaleFactor;
 			this.scaleY = contentScaleFactor;
+			
+			updateContentScaleLevel();
+		}
+
+		private function updateContentScaleLevel():void
+		{
+			var ss:Number = contentScaleFactor;
+			if(_nativeStage.hasOwnProperty("contentsScaleFactor"))
+				ss *= _nativeStage["contentsScaleFactor"];
+			if(ss>=8)
+				contentScaleLevel = 4; //x8
+			else if(ss>=3.5)
+				contentScaleLevel = 3; //x4
+			else if(ss>=2.5)
+				contentScaleLevel = 2; //x3
+			else if(ss>=1.5)
+				contentScaleLevel = 1; //x2
+			else
+				contentScaleLevel = 0;
 		}
 		
 		public function setFlashContextMenuDisabled(value:Boolean):void
@@ -484,7 +503,46 @@ package fairygui
 			if(!objs || objs.length==0)
 				return null;
 			else
-				return ToolSet.displayObjectToGObject(objs[objs.length-1]);
+			{
+				var cnt:int = objs.length;
+				for(var i:int=cnt-1;i>=0;i--)
+				{
+					var gobj:GObject = isTouchableGObject(objs[i]);
+					if(gobj)
+						return gobj;
+				}
+				
+				return null;
+			}
+		}
+		
+		private function isTouchableGObject(obj:DisplayObject):GObject
+		{
+			var founded:GObject = null;
+			var gobj:GObject;
+			while (obj != null && !(obj is Stage))
+			{
+				if (obj is UIDisplayObject)
+				{
+					gobj = UIDisplayObject(obj).owner;
+					if(!founded)
+					{
+						founded = gobj;
+						if(founded.touchable)
+							return founded;
+					}
+					else if(gobj.touchable)
+					{
+						if(gobj is GRoot)
+							return null;
+						else
+							return founded;
+					}
+				}
+				
+				obj = obj.parent;
+			}
+			return null;
 		}
 		
 		public function get focus():GObject
@@ -573,6 +631,8 @@ package fairygui
 				Multitouch.inputMode = MultitouchInputMode.TOUCH_POINT;
 				touchPointInput = true;
 			}
+
+			updateContentScaleLevel();
 
 			_nativeStage.addEventListener(MouseEvent.MOUSE_DOWN, __stageMouseDownCapture, true);
 			_nativeStage.addEventListener(MouseEvent.MOUSE_DOWN, __stageMouseDown, false, 1);

@@ -7,14 +7,14 @@ package fairygui
 	
 	import fairygui.display.UIImage;
 	import fairygui.utils.ToolSet;
-	import fairygui.gears.IColorGear;
 
-	public class GImage extends GObject implements IColorGear
+	public class GImage extends GObject
 	{
 		private var _bmdSource:BitmapData;
 		private var _content:Bitmap;
 		private var _color:uint;
 		private var _flip:int;
+		private var _contentItem:PackageItem;
 			
 		public function GImage()
 		{
@@ -40,7 +40,7 @@ package fairygui
 		{
 			var ct:ColorTransform = _content.transform.colorTransform;
 			ct.redMultiplier = ((_color>>16)&0xFF)/255;
-			ct.greenMultiplier =  ((_color>>8)&0xFF)/255;
+			ct.greenMultiplier = ((_color>>8)&0xFF)/255;
 			ct.blueMultiplier = (_color&0xFF)/255;
 			_content.transform.colorTransform = ct;
 		}
@@ -78,8 +78,8 @@ package fairygui
 		
 		override public function dispose():void
 		{
-			if(!packageItem.loaded)
-				packageItem.owner.removeItemCallback(packageItem, __imageLoaded);
+			if(_contentItem && !_contentItem.loaded)
+				_contentItem.owner.removeItemCallback(_contentItem, __imageLoaded);
 			
 			if(_content.bitmapData!=null && _content.bitmapData!=_bmdSource)
 			{
@@ -92,17 +92,20 @@ package fairygui
 		
 		override public function constructFromResource():void
 		{
-			sourceWidth = packageItem.width;
-			sourceHeight = packageItem.height;
+			_contentItem = packageItem.getBranch();
+
+			sourceWidth = _contentItem.width;
+			sourceHeight = _contentItem.height;
 			initWidth = sourceWidth;
 			initHeight = sourceHeight;
 			
 			setSize(sourceWidth, sourceHeight);
-			
-			if(packageItem.loaded)
-				__imageLoaded(packageItem);
+
+			_contentItem = _contentItem.getHighResolution();
+			if(_contentItem.loaded)
+				__imageLoaded(_contentItem);
 			else
-				packageItem.owner.addItemCallback(packageItem, __imageLoaded);
+				_contentItem.owner.addItemCallback(_contentItem, __imageLoaded);
 		}
 
 		private function __imageLoaded(pi:PackageItem):void
@@ -112,18 +115,28 @@ package fairygui
 			
 			_bmdSource = pi.image;
 			_content.bitmapData = _bmdSource;
-			_content.smoothing = packageItem.smoothing;
-			updateBitmap();
+			_content.smoothing = _contentItem.smoothing;
+			handleSizeChanged();
 		}
 		
 		override protected function handleSizeChanged():void
 		{
-			if(packageItem.scale9Grid==null && !packageItem.scaleByTile || _bmdSource!=packageItem.image)
-				_sizeImplType = 1;
-			else
-				_sizeImplType = 0;
 			handleScaleChanged();
 			updateBitmap();
+		}
+		
+		override protected function handleScaleChanged():void
+		{
+			if(_contentItem && _contentItem.scale9Grid==null && !_contentItem.scaleByTile && _bmdSource)
+			{
+				_displayObject.scaleX = _width/_bmdSource.width*_scaleX;
+				_displayObject.scaleY = _height/_bmdSource.height*_scaleY;
+			}
+			else
+			{
+				_displayObject.scaleX = _scaleX;
+				_displayObject.scaleY = _scaleY;
+			}
 		}
 		
 		private function updateBitmap():void
@@ -132,18 +145,20 @@ package fairygui
 				return;
 			
 			var newBmd:BitmapData = _bmdSource;
-			var w:int = this.width;
-			var h:int = this.height;
+			var sx:Number = _contentItem.width/sourceWidth;
+			var sy:Number = _contentItem.height/sourceHeight;
+			var w:int = _width * sx;
+			var h:int = _height * sy;
 			
 			if(w<=0 || h<=0)
 				newBmd = null;
-			else if(_bmdSource==packageItem.image
+			else if(_bmdSource==_contentItem.image
 				&& (_bmdSource.width!=w || _bmdSource.height!=h))
 			{
-				if(packageItem.scale9Grid!=null)
-					newBmd = ToolSet.scaleBitmapWith9Grid(_bmdSource, 
-						packageItem.scale9Grid, w, h, packageItem.smoothing, packageItem.tileGridIndice);
-				else if(packageItem.scaleByTile)
+				if(_contentItem.scale9Grid!=null)
+					newBmd = ToolSet.scaleBitmapWith9Grid(_bmdSource,
+						_contentItem.scale9Grid, w, h, _contentItem.smoothing, _contentItem.tileGridIndice);
+				else if(_contentItem.scaleByTile)
 					newBmd = ToolSet.tileBitmap(_bmdSource, _bmdSource.rect, w, h);
 			}
 			
@@ -168,7 +183,7 @@ package fairygui
 				}
 				
 				var bmdAfterFlip:BitmapData = new BitmapData(newBmd.width,newBmd.height,newBmd.transparent,0);
-				bmdAfterFlip.draw(newBmd, mat, null, null, null, packageItem.smoothing);
+				bmdAfterFlip.draw(newBmd, mat, null, null, null, _contentItem.smoothing);
 				
 				if(newBmd!=_bmdSource)
 					newBmd.dispose();
@@ -182,10 +197,29 @@ package fairygui
 				if(oldBmd && oldBmd!=_bmdSource)
 					oldBmd.dispose();
 				_content.bitmapData = newBmd;
-				_content.smoothing = packageItem.smoothing;
+				_content.smoothing = _contentItem.smoothing;
 			}
+
+			_content.width = _width;
+			_content.height = _height;
 		}
 		
+		override public function getProp(index:int):*
+		{
+			if(index==ObjectPropID.Color)
+				return this.color;
+			else
+				return super.getProp(index);
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			if(index==ObjectPropID.Color)
+				this.color = value;
+			else
+				super.setProp(index, value);
+		}
+
 		override public function setup_beforeAdd(xml:XML):void
 		{
 			super.setup_beforeAdd(xml);
@@ -197,7 +231,7 @@ package fairygui
 			
 			str = xml.@flip;
 			if(str)
-				this.flip = FlipType.parse(str);			
+				this.flip = FlipType.parse(str);
 		}
 	}
 }

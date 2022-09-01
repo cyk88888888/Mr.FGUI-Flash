@@ -117,6 +117,9 @@ package fairygui
 					
 				case "list":
 					return new GList();
+
+				case "tree":
+					return new GTree();
 					
 				case "graph":
 					return new GGraph();

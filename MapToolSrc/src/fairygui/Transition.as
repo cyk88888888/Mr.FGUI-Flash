@@ -2,13 +2,14 @@ package fairygui
 {
 	import flash.filters.ColorMatrixFilter;
 	
-	import fairygui.gears.IAnimationGear;
-	import fairygui.gears.IColorGear;
 	import fairygui.tween.EaseType;
 	import fairygui.tween.GTween;
 	import fairygui.tween.GTweener;
 	import fairygui.utils.ColorMatrix;
 	import fairygui.utils.ToolSet;
+	import fairygui.tween.GPath;
+	import fairygui.tween.CurveType;
+	import fairygui.tween.GPathPoint;
 	
 	public class Transition
 	{
@@ -37,6 +38,8 @@ package fairygui
 		private const OPTION_IGNORE_DISPLAY_CONTROLLER:int = 1;
 		private const OPTION_AUTO_STOP_DISABLED:int = 2;
 		private const OPTION_AUTO_STOP_AT_END:int = 4;
+
+		private var helperPathPoints:Vector.<GPathPoint> = new Vector.<GPathPoint>();
 
 		public function Transition(owner:GComponent)
 		{
@@ -261,11 +264,11 @@ package fairygui
 				{
 					if (paused)
 					{
-						item.value.flag = IAnimationGear(item.target).playing;
-						IAnimationGear(item.target).playing = false;
+						item.value.flag = item.target.getProp(ObjectPropID.Playing);
+						item.target.setProp(ObjectPropID.Playing, false);
 					}
 					else
-						IAnimationGear(item.target).playing = item.value.flag;
+						item.target.setProp(ObjectPropID.Playing, item.value.flag);
 				}
 				
 				if (item.tweener != null)
@@ -523,7 +526,7 @@ package fairygui
 						else if(item.type == TransitionActionType.Animation)
 						{
 							if(item.target != null)
-								IAnimationGear(item.target).timeScale = value;
+								item.target.setProp(ObjectPropID.TimeScale, value);
 						}
 					}
 				}
@@ -543,15 +546,24 @@ package fairygui
 				{
 					if (item.tweenConfig!=null)
 					{
-						item.tweenConfig.startValue.f1 += dx;
-						item.tweenConfig.startValue.f2 += dy;
-						item.tweenConfig.endValue.f1 += dx;
-						item.tweenConfig.endValue.f2 += dy;
+						if(!item.tweenConfig.startValue.b3)
+						{
+							item.tweenConfig.startValue.f1 += dx;
+							item.tweenConfig.startValue.f2 += dy;
+						}
+						if(!item.tweenConfig.endValue.b3)
+						{
+							item.tweenConfig.endValue.f1 += dx;
+							item.tweenConfig.endValue.f2 += dy;
+						}
 					}
 					else
 					{
-						item.value.f1 += dx;
-						item.value.f2 += dy;
+						if(!item.value.b3)
+						{
+							item.value.f1 += dx;
+							item.value.f2 += dy;
+						}
 					}
 				}
 			}
@@ -763,7 +775,7 @@ package fairygui
 			var playStartTime:Number;
 			var playTotalTime:Number;
 			var value:TValue_Animation;
-			var target:IAnimationGear;
+			var target:GObject;
 			var item:TransitionItem;
 			
 			var cnt:int = _items.length;
@@ -777,9 +789,9 @@ package fairygui
 				if (value.flag)
 					continue;
 				
-				target = IAnimationGear(item.target);
-				frame = target.frame;
-				playStartTime = target.playing ? 0 : -1;
+				target = item.target;
+				frame = target.getProp(ObjectPropID.Frame);
+				playStartTime = target.getProp(ObjectPropID.Playing) ? 0 : -1;
 				playTotalTime = 0;
 				
 				for (var j:int = i; j < cnt; j++)
@@ -821,10 +833,10 @@ package fairygui
 				if (playStartTime >= 0)
 					playTotalTime += (_startTime - playStartTime);
 				
-				target.playing = playStartTime>=0;
-				target.frame = frame;
+				target.setProp(ObjectPropID.Playing, playStartTime>=0);
+				target.setProp(ObjectPropID.Frame, frame);
 				if (playTotalTime > 0)
-					target.advance(playTotalTime*1000);
+					target.setProp(ObjectPropID.DeltaTime, playTotalTime*1000);
 			}
 		}
 		
@@ -865,35 +877,56 @@ package fairygui
 					if (item.target != _owner)
 					{
 						if (!startValue.b1)
-							startValue.f1 = item.target.x;
+							tweener.startValue.x = item.target.x;
+						else if(startValue.b3) //percent
+							tweener.startValue.x = startValue.f1 * _owner.width;
+
 						if (!startValue.b2)
-							startValue.f2 = item.target.y;
+							tweener.startValue.y = item.target.y;
+						else if(startValue.b3) //percent
+							tweener.startValue.y = startValue.f2 * _owner.height;
+
+						if (!endValue.b1)
+							tweener.endValue.x = tweener.startValue.x;
+						else if(endValue.b3)
+							tweener.endValue.x = endValue.f1 * _owner.width;
+						
+						if (!endValue.b2)
+							tweener.endValue.y = tweener.startValue.y;
+						else if(endValue.b3)
+							tweener.endValue.y = endValue.f2 * _owner.height;
 					}
 					else
 					{
 						if (!startValue.b1)
-							startValue.f1 = item.target.x - _ownerBaseX;
+							tweener.startValue.x = item.target.x - _ownerBaseX;
 						if (!startValue.b2)
-							startValue.f2 = item.target.y - _ownerBaseY;
+							tweener.startValue.y = item.target.y - _ownerBaseY;
+
+						if (!endValue.b1)
+							tweener.endValue.x = tweener.startValue.x;
+						if (!endValue.b2)
+							tweener.endValue.y = tweener.startValue.y;
 					}
 				}
 				else
 				{
 					if (!startValue.b1)
-						startValue.f1 = item.target.width;
+						tweener.startValue.x = item.target.width;
 					if (!startValue.b2)
-						startValue.f2 = item.target.height;
+						tweener.startValue.y = item.target.height;
+
+					if (!endValue.b1)
+						tweener.endValue.x = tweener.startValue.x;
+					if (!endValue.b2)
+						tweener.endValue.y = tweener.startValue.y;
 				}
-				
-				if (!endValue.b1)
-					endValue.f1 = startValue.f1;
-				if (!endValue.b2)
-					endValue.f2 = startValue.f2;
-				
-				tweener.startValue.x = startValue.f1;
-				tweener.startValue.y = startValue.f2;
-				tweener.endValue.x = endValue.f1;
-				tweener.endValue.y = endValue.f2;
+
+				if(item.tweenConfig.path)
+				{
+					item.value.b1 = item.value.b2 = true;
+					tweener.setPath(item.tweenConfig.path);
+				}
 			}
 			
 			callHook(item, false);
@@ -910,6 +943,11 @@ package fairygui
 				case TransitionActionType.Skew:
 					item.value.f1 = tweener.value.x;
 					item.value.f2 = tweener.value.y;
+					if(item.tweenConfig.path)
+					{
+						item.value.f1 += tweener.startValue.x;
+						item.value.f2 += tweener.startValue.y;
+					}
 					break;
 				
 				case TransitionActionType.Alpha:
@@ -1017,55 +1055,65 @@ package fairygui
 		private function applyValue(item:TransitionItem):void
 		{
 			item.target._gearLocked = true;
+			var value:Object = item.value;
 			
 			switch (item.type)
 			{
 				case TransitionActionType.XY:
 					if(item.target==_owner)
 					{
-						var f1:Number, f2:Number;
-						if (!item.value.b1)
-							f1 = item.target.x;
+						if (value.b1 && value.b2)
+							item.target.setXY(value.f1+_ownerBaseX, value.f2+_ownerBaseY);
+						else if (value.b1)
+							item.target.x = value.f1+_ownerBaseX;
 						else
-							f1 = item.value.f1+_ownerBaseX;
-						if (!item.value.b2)
-							f2 = item.target.y;
-						else
-							f2 = item.value.f2+_ownerBaseY;
-						item.target.setXY(f1, f2);
+							item.target.y = value.f2+_ownerBaseY;
 					}
 					else
 					{
-						if (!item.value.b1)
-							item.value.f1 = item.target.x;
-						if (!item.value.b2)
-							item.value.f2 = item.target.y;
-						item.target.setXY(item.value.f1, item.value.f2);
+						if(value.b3) //position in percent
+						{
+							if(value.b1 && value.b2)
+								item.target.setXY(value.f1*_owner.width, value.f2*_owner.height);
+							else if(value.b1)
+								item.target.x = value.f1*_owner.width;
+							else if(value.b2)
+								item.target.y = value.f2*_owner.height;
+						}
+						else
+						{
+							if(value.b1 && value.b2)
+								item.target.setXY(value.f1, value.f2);
+							else if(value.b1)
+								item.target.x = value.f1;
+							else if(value.b2)
+								item.target.y = value.f2;
+						}
 					}
 					break;
 				
 				case TransitionActionType.Size:
-					if (!item.value.b1)
-						item.value.f1 = item.target.width;
-					if (!item.value.b2)
-						item.value.f2 = item.target.height;
-					item.target.setSize(item.value.f1, item.value.f2);
+					if (!value.b1)
+						value.f1 = item.target.width;
+					if (!value.b2)
+						value.f2 = item.target.height;
+					item.target.setSize(value.f1, value.f2);
 					break;
 				
 				case TransitionActionType.Pivot:
-					item.target.setPivot(item.value.f1, item.value.f2, item.target.pivotAsAnchor);
+					item.target.setPivot(value.f1, value.f2, item.target.pivotAsAnchor);
 					break;
 				
 				case TransitionActionType.Alpha:
-					item.target.alpha = item.value.f1;
+					item.target.alpha = value.f1;
 					break;
 				
 				case TransitionActionType.Rotation:
-					item.target.rotation = item.value.f1;
+					item.target.rotation = value.f1;
 					break;
 				
 				case TransitionActionType.Scale: 
-					item.target.setScale(item.value.f1, item.value.f2);
+					item.target.setScale(value.f1, value.f2);
 					break;
 				
 				case TransitionActionType.Skew:
@@ -1073,33 +1121,33 @@ package fairygui
 					break;
 				
 				case TransitionActionType.Color:
-					IColorGear(item.target).color = item.value.f1;
+					item.target.setProp(ObjectPropID.Color, value.f1);
 					break;
 				
 				case TransitionActionType.Animation:
-					if (item.value.frame>=0)
-						IAnimationGear(item.target).frame = item.value.frame;
-					IAnimationGear(item.target).playing = item.value.playing;
-					IAnimationGear(item.target).timeScale = _timeScale;
+					if (value.frame>=0)
+						item.target.setProp(ObjectPropID.Frame, value.frame);
+					item.target.setProp(ObjectPropID.Playing, value.playing);
+					item.target.setProp(ObjectPropID.TimeScale, _timeScale);
 					break;
 				
 				case TransitionActionType.Visible:
-					item.target.visible = item.value.visible;
+					item.target.visible = value.visible;
 					break;
 				
 				case TransitionActionType.Transition:
 					if (_playing)
 					{
-						var trans:Transition = item.value.trans;
+						var trans:Transition = value.trans;
 						if (trans != null)
 						{
 							_totalTasks++;
 							var startTime:Number = _startTime > item.time ? (_startTime - item.time) : 0;
 							var endTime:Number = _endTime >= 0 ? (_endTime - item.time) : -1;
-							if (item.value.stopTime >= 0 && (endTime < 0 || endTime > item.value.stopTime))
-								endTime = item.value.stopTime;
+							if (value.stopTime >= 0 && (endTime < 0 || endTime > value.stopTime))
+								endTime = value.stopTime;
 							trans.timeScale = _timeScale;
-							trans._play(onPlayTransCompleted, item, item.value.playTimes, 0, startTime, endTime, _reversed);
+							trans._play(onPlayTransCompleted, item, value.playTimes, 0, startTime, endTime, _reversed);
 						}
 					}
 					break;
@@ -1107,21 +1155,21 @@ package fairygui
 				case TransitionActionType.Sound:
 					if (_playing && item.time >= _startTime)
 					{
-						if(item.value.audioClip==null)
+						if(value.audioClip==null)
 						{
-							var pi:PackageItem = UIPackage.getItemByURL(item.value.sound);
+							var pi:PackageItem = UIPackage.getItemByURL(value.sound);
 							if(pi)
-								item.value.audioClip = pi.owner.getSound(pi);
+								value.audioClip = pi.owner.getSound(pi);
 						}
-						if(item.value.audioClip)
-							GRoot.inst.playOneShotSound(item.value.audioClip, item.value.volume);
+						if(value.audioClip)
+							GRoot.inst.playOneShotSound(value.audioClip, value.volume);
 					}
 					break;
 				
 				case TransitionActionType.Shake:
-					item.target.setXY(item.target.x - item.value.lastOffsetX + item.value.offsetX, item.target.y - item.value.lastOffsetY + item.value.offsetY);
-					item.value.lastOffsetX = item.value.offsetX;
-					item.value.lastOffsetY = item.value.offsetY;
+					item.target.setXY(item.target.x - value.lastOffsetX + value.offsetX, item.target.y - value.lastOffsetY + value.offsetY);
+					value.lastOffsetX = value.offsetX;
+					value.lastOffsetY = value.offsetY;
 					break;
 				
 				case TransitionActionType.ColorFilter:
@@ -1138,21 +1186,21 @@ package fairygui
 							cf = ColorMatrixFilter(arr[0]);
 						
 						var cm:ColorMatrix = new ColorMatrix();
-						cm.adjustBrightness(item.value.f1);
-						cm.adjustContrast(item.value.f2);
-						cm.adjustSaturation(item.value.f3);
-						cm.adjustHue(item.value.f4);
+						cm.adjustBrightness(value.f1);
+						cm.adjustContrast(value.f2);
+						cm.adjustSaturation(value.f3);
+						cm.adjustHue(value.f4);
 						cf.matrix = cm;
 						item.target.filters = arr;
 					}
 					break;
 				
 				case TransitionActionType.Text:
-					item.target.text = item.value.text;
+					item.target.text = value.text;
 					break;
 				
 				case TransitionActionType.Icon:
-					item.target.icon = item.value.text;
+					item.target.icon = value.text;
 					break;
 			}
 			
@@ -1222,6 +1270,50 @@ package fairygui
 					{
 						item.tweenConfig = null;
 						decodeValue(item, cxml.@startValue, item.value);
+					}
+
+					str = cxml.@path;
+					if(str)
+					{
+						var arr:Array = str.split(",");
+						var path:GPath = new GPath();
+						item.tweenConfig.path = path;
+						helperPathPoints.length = 0;
+
+						var cnt:int = arr.length;
+						var i:int = 0;
+						while(i<cnt)
+						{
+							var ppt:GPathPoint = new GPathPoint();
+							ppt.curveType = parseInt(arr[i++]);
+							switch(ppt.curveType)
+							{
+								case CurveType.Bezier:
+									ppt.x = parseInt(arr[i++]);
+									ppt.y = parseInt(arr[i++]);
+									ppt.control1_x = parseInt(arr[i++]);
+									ppt.control1_y = parseInt(arr[i++]);
+									break;
+
+								case CurveType.CubicBezier:
+									ppt.x = parseInt(arr[i++]);
+									ppt.y = parseInt(arr[i++]);
+									ppt.control1_x = parseInt(arr[i++]);
+									ppt.control1_y = parseInt(arr[i++]);
+									ppt.control2_x = parseInt(arr[i++]);
+									ppt.control2_y = parseInt(arr[i++]);
+									ppt.smooth = arr[i++]=="1";
+									break;
+
+								default:
+									ppt.x = parseInt(arr[i++]);
+									ppt.y = parseInt(arr[i++]);
+									break;
+							}
+							helperPathPoints.push(ppt);
+						}
+
+						path.create(helperPathPoints);
 					}
 				}
 				else
@@ -1321,6 +1413,13 @@ package fairygui
 						value.f2 = parseFloat(arr[1]);
 						value.b2 = true;
 					}
+
+					if(arr.length>2 && item.type==TransitionActionType.XY)
+					{
+						value.b3 = true;
+						value.f1 = parseFloat(arr[2]);
+						value.f2 = parseFloat(arr[3]);
+					}
 					break;
 				
 				case TransitionActionType.Alpha:
@@ -1407,6 +1506,7 @@ import fairygui.GObject;
 import fairygui.Transition;
 import fairygui.tween.EaseType;
 import fairygui.tween.GTweener;
+import fairygui.tween.GPath;
 
 class TransitionActionType
 {
@@ -1497,6 +1597,7 @@ class TweenConfig
 	public var yoyo:Boolean;
 	public var startValue:TValue;
 	public var endValue:TValue;
+	public var path:GPath;
 	public var endLabel:String;
 	public var endHook:Function;
 	
@@ -1511,6 +1612,9 @@ class TweenConfig
 class TValue_Visible
 {
 	public var visible:Boolean;
+	public function TValue_Visible()
+	{
+	}
 }
 
 class TValue_Animation
@@ -1518,6 +1622,9 @@ class TValue_Animation
 	public var frame:int;
 	public var playing:Boolean;
 	public var flag:Boolean;
+	public function TValue_Animation()
+	{
+	}
 }
 
 class TValue_Sound
@@ -1525,6 +1632,9 @@ class TValue_Sound
 	public var sound:String;
 	public var volume:Number;
 	public var audioClip:Sound;
+	public function TValue_Sound()
+	{
+	}
 }
 
 class TValue_Transition
@@ -1533,6 +1643,9 @@ class TValue_Transition
 	public var playTimes:int;
 	public var trans:Transition;
 	public var stopTime:Number;
+	public function TValue_Transition()
+	{
+	}
 }
 
 class TValue_Shake
@@ -1543,11 +1656,17 @@ class TValue_Shake
 	public var offsetY:Number;
 	public var lastOffsetX:Number;
 	public var lastOffsetY:Number;
+	public function TValue_Shake()
+	{
+	}
 }
 
 class TValue_Text
 {
 	public var text:String;
+	public function TValue_Text()
+	{
+	}
 }
 
 class TValue
@@ -1559,10 +1678,10 @@ class TValue
 	
 	public var b1:Boolean;
 	public var b2:Boolean;
+	public var b3:Boolean;
 	
 	public function TValue()
 	{
 		b1 = b2 = true;
 	}
 }
-

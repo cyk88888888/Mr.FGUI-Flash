@@ -15,6 +15,8 @@ package fairygui
 	import fairygui.event.GTouchEvent;
 	import fairygui.utils.GTimers;
 	import fairygui.utils.ToolSet;
+	import fairygui.tween.GTween;
+	import fairygui.tween.GTweener;
 
 	[Event(name = "scroll", type = "flash.events.Event")]
 	[Event(name = "scrollEnd", type = "flash.events.Event")]
@@ -42,10 +44,11 @@ package fairygui
 		
 		private var _displayOnLeft:Boolean;
 		private var _snapToItem:Boolean;
-		private var _displayInDemand:Boolean;
+		internal var _displayInDemand:Boolean;
 		private var _mouseWheelEnabled:Boolean;
 		private var _pageMode:Boolean;
 		private var _inertiaDisabled:Boolean;
+		private var _floating:Boolean;
 		
 		private var _xPos:Number;
 		private var _yPos:Number;
@@ -63,11 +66,11 @@ package fairygui
 		private var _lastMoveTime:Number;
 		private var _isHoldAreaDone:Boolean;
 		private var _aniFlag:int;
-		private var _scrollBarVisible:Boolean;
 		internal var _loop:int;
 		private var _headerLockedSize:int;
 		private var _footerLockedSize:int;
 		private var _refreshEventDispatching:Boolean;
+		private var _hover:Boolean;
 		
 		private var _tweening:int;
 		private var _tweenTime:Point;
@@ -119,7 +122,7 @@ package fairygui
 			_container = _owner._container;
 			_container.x = 0;
 			_container.y = 0;
-			_container.mouseEnabled = false;			
+			_container.mouseEnabled = false;
 			_maskContainer.addChild(_container);
 			
 			_scrollBarMargin = scrollBarMargin;
@@ -145,10 +148,10 @@ package fairygui
 			else
 				_bouncebackEffect = UIConfig.defaultScrollBounceEffect;
 			_inertiaDisabled = (flags & 256)!=0;
+			_floating = (flags & 1024)!=0;
 			if((flags & 512) == 0)
 				_maskContainer.scrollRect = new Rectangle();
 			
-			_scrollBarVisible = true;
 			_mouseWheelEnabled = true;
 			_xPos = 0;
 			_yPos = 0;
@@ -203,7 +206,6 @@ package fairygui
 				_scrollBarDisplayAuto = scrollBarDisplay==ScrollBarDisplayType.Auto;
 				if(_scrollBarDisplayAuto)
 				{
-					_scrollBarVisible = false;
 					if(_vtScrollBar)
 						_vtScrollBar.displayObject.visible = false;
 					if(_hzScrollBar)
@@ -357,7 +359,7 @@ package fairygui
 		{
 			_decelerationRate = value;
 		}
-		
+
 		public function get percX():Number
 		{
 			return _overlapSize.x == 0 ? 0 : _xPos / _overlapSize.x;
@@ -450,32 +452,32 @@ package fairygui
 			return _contentSize.y;
 		}
 		
-		public function get viewWidth():int
+		public function get viewWidth():Number
 		{
 			return _viewSize.x;
 		}
 		
-		public function set viewWidth(value:int):void
+		public function set viewWidth(value:Number):void
 		{
 			value = value + _owner.margin.left + _owner.margin.right;
-			if (_vtScrollBar != null)
+			if (_vtScrollBar != null && !_floating)
 				value += _vtScrollBar.width;
 			_owner.width = value;
 		}
 		
-		public function get viewHeight():int
+		public function get viewHeight():Number
 		{
 			return _viewSize.y;
 		}
 		
-		public function set viewHeight(value:int):void
+		public function set viewHeight(value:Number):void
 		{
 			value = value + _owner.margin.top + _owner.margin.bottom;
-			if (_hzScrollBar != null)
+			if (_hzScrollBar != null && !_floating)
 				value += _hzScrollBar.height;
 			_owner.height = value;
 		}
-		
+
 		public function get currentPageX():int
 		{
 			if (!_pageMode)
@@ -512,16 +514,19 @@ package fairygui
 		
 		public function setCurrentPageX(value:int, ani:Boolean):void
 		{
+			_owner.ensureBoundsCorrect();
+			
 			if (_pageMode && _overlapSize.x>0)
 				this.setPosX(value * _pageSize.x, ani);
 		}
 		
 		public function setCurrentPageY(value:int, ani:Boolean):void
 		{
+			_owner.ensureBoundsCorrect();
+			
 			if (_pageMode && _overlapSize.y>0)
 				this.setPosY(value * _pageSize.y, ani);
 		}
-		
 		
 		public function get isBottomMost():Boolean
 		{
@@ -620,12 +625,11 @@ package fairygui
 				else
 				{
 					rect = sHelperRect;
-					rect.setTo(target.x, target.y, target.width, target.height);					
+					rect.setTo(target.x, target.y, target.width, target.height);
 				}
 			}
 			else
-				rect = Rectangle(target);			
-			
+				rect = Rectangle(target);
 			
 			if(_overlapSize.y>0)
 			{
@@ -719,9 +723,7 @@ package fairygui
 				_tweenChange.setTo(0,0);
 				_tweenChange[_refreshBarAxis] = _headerLockedSize - _tweenStart[_refreshBarAxis];
 				_tweenDuration.setTo(TWEEN_TIME_DEFAULT, TWEEN_TIME_DEFAULT);
-				_tweenTime.setTo(0,0);
-				_tweening = 2;
-				GTimers.inst.callBy60Fps(tweenUpdate);
+				startTween(2);
 			}
 		}
 
@@ -743,9 +745,7 @@ package fairygui
 					max += _footerLockedSize;
 				_tweenChange[_refreshBarAxis] = -max - _tweenStart[_refreshBarAxis];
 				_tweenDuration.setTo(TWEEN_TIME_DEFAULT, TWEEN_TIME_DEFAULT);
-				_tweenTime.setTo(0,0);
-				_tweening = 2;
-				GTimers.inst.callBy60Fps(tweenUpdate);
+				startTween(2);
 			}
 		}
 		
@@ -788,7 +788,7 @@ package fairygui
 		internal function adjustMaskContainer():void
 		{
 			var mx:Number, my:Number;
-			if (_displayOnLeft && _vtScrollBar != null)
+			if (_displayOnLeft && _vtScrollBar != null && !_floating)
 				mx = Math.floor(_owner.margin.left + _vtScrollBar.width);
 			else
 				mx = Math.floor(_owner.margin.left);
@@ -850,9 +850,9 @@ package fairygui
 			
 			_viewSize.x = aWidth;
 			_viewSize.y = aHeight;
-			if(_hzScrollBar && !_hScrollNone)
+			if(_hzScrollBar && !_floating)
 				_viewSize.y -= _hzScrollBar.height;
-			if(_vtScrollBar && !_vScrollNone)
+			if(_vtScrollBar && !_floating)
 				_viewSize.x -= _vtScrollBar.width;
 			_viewSize.x -= (_owner.margin.left+_owner.margin.right);
 			_viewSize.y -= (_owner.margin.top+_owner.margin.bottom);
@@ -865,7 +865,7 @@ package fairygui
 			handleSizeChanged();
 		}
 		
-		public function setContentSize(aWidth:Number, aHeight:Number):void
+		internal function setContentSize(aWidth:Number, aHeight:Number):void
 		{
 			if(_contentSize.x==aWidth && _contentSize.y==aHeight)
 				return;
@@ -955,79 +955,36 @@ package fairygui
 		{
 			if(_displayInDemand)
 			{
-				if(_vtScrollBar)
-				{
-					if(_contentSize.y<=_viewSize.y)
-					{
-						if(!_vScrollNone)
-						{
-							_vScrollNone = true;
-							_viewSize.x += _vtScrollBar.width;
-						}
-					}
-					else
-					{
-						if(_vScrollNone)
-						{
-							_vScrollNone = false;
-							_viewSize.x -= _vtScrollBar.width;
-						}
-					}
-				}
-				if(_hzScrollBar)
-				{
-					if(_contentSize.x<=_viewSize.x)
-					{
-						if(!_hScrollNone)
-						{
-							_hScrollNone = true;
-							_viewSize.y += _hzScrollBar.height;
-						}
-					}
-					else
-					{
-						if(_hScrollNone)
-						{
-							_hScrollNone = false;
-							_viewSize.y -= _hzScrollBar.height;
-						}
-					}
-				}
+				_vScrollNone = _contentSize.y<=_viewSize.y;
+				_hScrollNone = _contentSize.x<=_viewSize.x;
 			}
 			
 			if(_vtScrollBar)
 			{
-				if(_viewSize.y<_vtScrollBar.minSize)
-					//没有使用_vtScrollBar.visible是因为ScrollBar用了一个trick，它并不在owner的DisplayList里，因此_vtScrollBar.visible是无效的
-					_vtScrollBar.displayObject.visible = false;
+				if(_contentSize.y==0)
+					_vtScrollBar.setDisplayPerc(0);
 				else
-				{
-					_vtScrollBar.displayObject.visible = _scrollBarVisible && !_vScrollNone;
-					if(_contentSize.y==0)
-						_vtScrollBar.displayPerc = 0;
-					else
-						_vtScrollBar.displayPerc = Math.min(1, _viewSize.y/_contentSize.y);
-				}
+					_vtScrollBar.setDisplayPerc(Math.min(1, _viewSize.y/_contentSize.y));
 			}
 			if(_hzScrollBar)
 			{
-				if(_viewSize.x<_hzScrollBar.minSize)
-					_hzScrollBar.displayObject.visible = false;
+				if(_contentSize.x==0)
+					_hzScrollBar.setDisplayPerc(0);
 				else
-				{
-					_hzScrollBar.displayObject.visible = _scrollBarVisible && !_hScrollNone;
-					if(_contentSize.x==0)
-						_hzScrollBar.displayPerc = 0;
-					else
-						_hzScrollBar.displayPerc = Math.min(1, _viewSize.x/_contentSize.x);
-				}
+					_hzScrollBar.setDisplayPerc(Math.min(1, _viewSize.x/_contentSize.x));
 			}
+
+			updateScrollBarVisible();
 			
 			var rect:Rectangle = _maskContainer.scrollRect;
 			if (rect)
 			{
 				rect.width = _viewSize.x;
 				rect.height = _viewSize.y;
+				if(_vScrollNone && _vtScrollBar)
+					rect.width += _vtScrollBar.width;
+				if(_hScrollNone && _hzScrollBar)
+					rect.height += _hzScrollBar.height;
 				_maskContainer.scrollRect = rect;
 			}
 			
@@ -1084,8 +1041,7 @@ package fairygui
 				_container.y = ToolSet.clamp(_container.y, -_overlapSize.y, 0);
 			}
 			
-			syncScrollBar(true);
-			checkRefreshBar();
+			updateScrollBarPos();
 			if (_pageMode)
 				updatePageController();
 		}
@@ -1125,7 +1081,7 @@ package fairygui
 				refresh2();
 			}
 			
-			syncScrollBar();
+			updateScrollBarPos();
 			_aniFlag = 0;
 		}
 		
@@ -1155,12 +1111,10 @@ package fairygui
 				
 				if (posX != _container.x || posY != _container.y)
 				{
-					_tweening = 1;
-					_tweenTime.setTo(0,0);
 					_tweenDuration.setTo(TWEEN_TIME_GO, TWEEN_TIME_GO);
 					_tweenStart.setTo(_container.x, _container.y);
 					_tweenChange.setTo(posX - _tweenStart.x, posY - _tweenStart.y);
-					GTimers.inst.callBy60Fps(tweenUpdate);
+					startTween(1);
 				}
 				else if (_tweening != 0)
 					killTween();
@@ -1178,25 +1132,6 @@ package fairygui
 			
 			if (_pageMode)
 				updatePageController();
-		}
-		
-		private function syncScrollBar(end:Boolean=false):void
-		{
-			if (_vtScrollBar != null)
-			{
-				_vtScrollBar.scrollPerc = _overlapSize.y == 0 ? 0 : ToolSet.clamp(-_container.y, 0, _overlapSize.y) / _overlapSize.y;
-				if (_scrollBarDisplayAuto)
-					showScrollBar(!end);
-			}
-			if (_hzScrollBar != null)
-			{
-				_hzScrollBar.scrollPerc = _overlapSize.x == 0 ? 0 : ToolSet.clamp(-_container.x, 0, _overlapSize.x) / _overlapSize.x;
-				if (_scrollBarDisplayAuto)
-					showScrollBar(!end);
-			}
-			
-			if(end)
-				_maskContainer.mouseChildren = true;
 		}
 		
 		private function __mouseDown(evt:GTouchEvent):void
@@ -1415,8 +1350,8 @@ package fairygui
 			isDragged = true;
 			_maskContainer.mouseChildren = false;
 			
-			syncScrollBar();
-			checkRefreshBar();
+			updateScrollBarPos();
+			updateScrollBarVisible();
 			if (_pageMode)
 				updatePageController();
 			
@@ -1531,8 +1466,7 @@ package fairygui
 				_tweenChange.y = sEndPos.y - _tweenStart.y;
 				if (_tweenChange.x == 0 && _tweenChange.y == 0)
 				{
-					if (_scrollBarDisplayAuto)
-						showScrollBar(false);
+					updateScrollBarVisible();
 					return;
 				}
 				
@@ -1544,10 +1478,7 @@ package fairygui
 				}
 			}
 			
-			_tweening = 2;
-			_tweenTime.setTo(0,0);
-			isNeedMoveToView=true;	
-			GTimers.inst.callBy60Fps(tweenUpdate);
+			startTween(2);
 		}
 		
 		private function __mouseWheel(evt:MouseEvent):void
@@ -1581,33 +1512,67 @@ package fairygui
 		}
 		
 		private function __rollOver(evt:Event):void
-		{
-			showScrollBar(true);
+		{ 
+			_hover = true;
+			updateScrollBarVisible();
 		}
 		
 		private function __rollOut(evt:Event):void
 		{
-			showScrollBar(false);
+			_hover = false;
+			updateScrollBarVisible();
+		}
+
+		private function updateScrollBarPos():void
+		{
+			if (_vtScrollBar != null)
+				_vtScrollBar.setScrollPerc(_overlapSize.y == 0 ? 0 : ToolSet.clamp(-_container.y, 0, _overlapSize.y) / _overlapSize.y);
+
+			if (_hzScrollBar != null)
+				_hzScrollBar.setScrollPerc(_overlapSize.x == 0 ? 0 : ToolSet.clamp(-_container.x, 0, _overlapSize.x) / _overlapSize.x);
+
+			checkRefreshBar();
 		}
 		
-		private function showScrollBar(val:Boolean):void
+		internal function updateScrollBarVisible():void
 		{
-			if(val)
-			{
-				__showScrollBar(true);
-				GTimers.inst.remove(__showScrollBar);
-			}
-			else
-				GTimers.inst.add(500, 1, __showScrollBar, val);
-		}
-		
-		private function __showScrollBar(val:Boolean):void
-		{
-			_scrollBarVisible = val && _viewSize.x>0 && _viewSize.y>0;
 			if(_vtScrollBar)
-				_vtScrollBar.displayObject.visible = _scrollBarVisible &&　!_vScrollNone;
+			{
+				if(_viewSize.y<=_vtScrollBar.minSize || _vScrollNone)
+					_vtScrollBar.displayObject.visible = false;
+				else
+					updateScrollBarVisible2(_vtScrollBar);
+			}
+
 			if(_hzScrollBar)
-				_hzScrollBar.displayObject.visible = _scrollBarVisible &&　!_hScrollNone;
+			{
+				if(_viewSize.x<=_hzScrollBar.minSize || _hScrollNone)
+					_hzScrollBar.displayObject.visible = false;
+				else
+					updateScrollBarVisible2(_hzScrollBar);
+			}
+		}
+
+		private function updateScrollBarVisible2(bar:GScrollBar):void
+		{
+			if (_scrollBarDisplayAuto)
+				GTween.kill(bar, false, "alpha");
+
+			if (_scrollBarDisplayAuto && !_hover && _tweening == 0 && !isDragged && !bar.gripDragging) {
+				if (bar.displayObject.visible)
+					GTween.to(1, 0, 0.5).setDelay(0.5).onComplete(__barTweenComplete).setTarget(bar, "alpha");
+			}
+			else {
+				bar.alpha = 1;
+				bar.displayObject.visible = true;
+			}
+		}
+
+		private function __barTweenComplete(tweener:GTweener):void
+		{
+			var bar:GObject = GObject(tweener.target);
+			bar.alpha = 1;
+			bar.displayObject.visible = false;
 		}
 		
 		private function getLoopPartSize(division:Number, axis:String):Number
@@ -1877,6 +1842,15 @@ package fairygui
 			
 			_tweenDuration[axis] = newDuration;
 		}
+
+		private function startTween(type:int):void
+		{
+			_tweenTime.setTo(0,0);
+			_tweening = type;
+			GTimers.inst.callBy60Fps(tweenUpdate);
+
+			updateScrollBarVisible();
+		}
 		
 		private function killTween():void
 		{
@@ -1889,6 +1863,7 @@ package fairygui
 			
 			_tweening = 0;
 			GTimers.inst.remove(tweenUpdate);
+			updateScrollBarVisible();
 			dispatchEvent(new Event(SCROLL_END));
 		}
 		
@@ -1947,16 +1922,15 @@ package fairygui
 				}
 			}
 		}
-		public var isNeedMoveToView:Boolean=true;
+		
 		private function tweenUpdate():void
 		{
 			var nx:Number = runTween("x");
 			var ny:Number = runTween("y");
 			
-			if(isNeedMoveToView){
-				_container.x = nx;
-				_container.y = ny;
-			}
+			_container.x = nx;
+			_container.y = ny;
+			
 			if (_tweening == 2)
 			{
 				if (_overlapSize.x > 0)
@@ -1972,18 +1946,17 @@ package fairygui
 			{
 				_tweening = 0;
 				GTimers.inst.remove(tweenUpdate);
-				
+
 				loopCheckingCurrent();
+				updateScrollBarPos();
+				updateScrollBarVisible();
 				
-				syncScrollBar(true);
-				checkRefreshBar();
 				dispatchEvent(new Event(Event.SCROLL));
 				dispatchEvent(new Event(SCROLL_END));
 			}
 			else
 			{
-				syncScrollBar(false);
-				checkRefreshBar();
+				updateScrollBarPos();
 				dispatchEvent(new Event(Event.SCROLL));
 			}
 		}

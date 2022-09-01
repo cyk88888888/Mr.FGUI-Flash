@@ -26,7 +26,6 @@ package fairygui.utils
 			reset();
 		}
 		
-		
 		// public methods:
 		public function reset():void {
 			for (var i:uint=0; i<LENGTH; i++) {
@@ -101,11 +100,6 @@ package fairygui.utils
 				((LUMA_R + (cos * -(LUMA_R))) + (sin * -((1 - LUMA_R)))), ((LUMA_G + (cos * -(LUMA_G))) + (sin * LUMA_G)), ((LUMA_B + (cos * (1 - LUMA_B))) + (sin * LUMA_B)), 0, 0,
 				0, 0, 0, 1, 0
 			]);
-		}
-		
-		public function concat(p_matrix:Array):void {
-			if (p_matrix.length != LENGTH) { return; }
-			multiplyMatrix(p_matrix);
 		}
 		
 		public function clone():ColorMatrix {

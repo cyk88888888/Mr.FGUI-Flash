@@ -8,6 +8,7 @@ package fairygui
 	import flash.text.TextFieldType;
 	
 	import fairygui.utils.ToolSet;
+	import fairygui.utils.UBBParser;
 
 	public class GTextInput extends GTextField
 	{
@@ -139,7 +140,7 @@ package fairygui
 			if(!_text && _promptText)
 			{
 				_textField.displayAsPassword = false;
-				_textField.htmlText = ToolSet.parseUBB(ToolSet.encodeHTML(_promptText));
+				_textField.htmlText = UBBParser.inst.parse(ToolSet.encodeHTML(_promptText));
 			}
 			else
 			{
@@ -178,7 +179,7 @@ package fairygui
 				if(_promptText)
 				{
 					_textField.displayAsPassword = false;
-					_textField.htmlText = ToolSet.parseUBB(ToolSet.encodeHTML(_promptText));
+					_textField.htmlText = UBBParser.inst.parse(ToolSet.encodeHTML(_promptText));
 				}			
 			}
 		}
@@ -214,7 +215,7 @@ package fairygui
 			if(!_text && _promptText)
 			{
 				_textField.displayAsPassword = false;
-				_textField.htmlText = ToolSet.parseUBB(ToolSet.encodeHTML(_promptText));
+				_textField.htmlText = UBBParser.inst.parse(ToolSet.encodeHTML(_promptText));
 			}
 		}
 	}

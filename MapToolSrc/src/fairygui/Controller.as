@@ -267,6 +267,19 @@ package fairygui
 		{
 			_name = xml.@name;
 			_autoRadioGroupDepth = xml.@autoRadioGroupDepth=="true";
+			var homePageType:String = xml.@homePageType;
+			var homePage:String;
+			var homePageName:String;
+			var homePageIndex:int = 0;
+			if(homePageType)
+			{
+				homePage = xml.@homePage;
+				homePageIndex = -1;
+				if(homePageType=="branch")
+					homePageName = UIPackage.branch;
+				else if(homePageType=="variable")
+					homePageName = UIPackage.getVar(homePage);
+			}
 			
 			var i:int;
 			var k:int;
@@ -277,11 +290,14 @@ package fairygui
 				var cnt:int = arr.length;
 				for(i=0;i<cnt;i+=2)
 				{
-					_pageIds.push(arr[i]);
-					_pageNames.push(arr[i+1]);
+					var pageId:String = arr[i];
+					var pageName:String = arr[i+1];
+					if(homePageIndex==-1 && (homePageName==null?(pageId==homePage):(pageName==homePageName)))
+						homePageIndex = _pageIds.length;
+					_pageIds.push(pageId);
+					_pageNames.push(pageName);
 				}
 			}
-			
 			
 			var col:XMLList = xml.action;
 			if(col.length()>0)
@@ -331,7 +347,7 @@ package fairygui
 			}
 			
 			if(_parent && _pageIds.length>0)
-				_selectedIndex = 0;
+				_selectedIndex = homePageIndex<0?0:homePageIndex;
 			else
 				_selectedIndex = -1;
 		}

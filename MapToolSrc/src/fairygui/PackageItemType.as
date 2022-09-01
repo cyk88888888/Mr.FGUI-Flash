@@ -30,6 +30,8 @@ package fairygui
 					return Swf;
 				case "font":
 					return Font;
+				default:
+					return Misc;
 			}
 			return 0;
 		}

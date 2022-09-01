@@ -220,9 +220,15 @@ package fairygui
 		
 		private function closeSecondLevelMenu():void
 		{
+			if(!_expandingItem)
+				return;
+			
 			if(_expandingItem is GButton)
 				GButton(_expandingItem).selected = false;
 			var popup:PopupMenu = PopupMenu(_expandingItem.data);
+			if(!popup)
+				return;
+
 			_expandingItem = null;
 			popup.hide();
 		}
@@ -279,7 +285,7 @@ package fairygui
 			_parentMenu = null;
 			
 			if(_expandingItem)
-				closeSecondLevelMenu();
+				GTimers.inst.callLater(closeSecondLevelMenu);
 		}
 		
 		private function __rollOver(evt:MouseEvent):void

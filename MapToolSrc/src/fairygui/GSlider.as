@@ -4,14 +4,17 @@ package fairygui
 	
 	import fairygui.event.GTouchEvent;
 	import fairygui.event.StateChangeEvent;
+	import fairygui.utils.ToolSet;
 	
 	[Event(name = "stateChanged", type = "fairygui.event.StateChangeEvent")]
 	public class GSlider extends GComponent
 	{
-		private var _max:int;
-		private var _value:int;
+		private var _min:Number;
+		private var _max:Number;
+		private var _value:Number;
 		private var _titleType:int;
 		private var _reverse:Boolean;
+		private var _wholeNumbers:Boolean;
 
 		private var _titleObject:GTextField;
 		private var _barObjectH:GObject;
@@ -51,12 +54,40 @@ package fairygui
 			_titleType = value;
 		}
 		
-		final public function get max():int
+		public function get wholeNumbers():Boolean
+		{
+			return _wholeNumbers;
+		}
+
+		public function set wholeNumbers(value:Boolean):void
+		{
+			if(_wholeNumbers != value)
+			{
+				_wholeNumbers = value;
+				update();
+			}
+		}
+		
+		public function get min():Number
+		{
+			return _min;
+		}
+		
+		public function set min(value:Number):void
+		{
+			if(_min != value)
+			{
+				_min = value;
+				update();
+			}
+		}
+
+		final public function get max():Number
 		{
 			return _max;
 		}
 		
-		final public function set max(value:int):void
+		final public function set max(value:Number):void
 		{
 			if(_max != value)
 			{
@@ -65,12 +96,12 @@ package fairygui
 			}
 		}
 		
-		final public function get value():int
+		final public function get value():Number
 		{
 			return _value;
 		}
 		
-		final public function set value(value:int):void
+		final public function set value(value:Number):void
 		{
 			if(_value != value)
 			{
@@ -81,12 +112,28 @@ package fairygui
 		
 		public function update():void
 		{
-			var percent:Number = Math.min(_value/_max,1);
-			updateWidthPercent(percent);
+			updateWithPercent((_value-_min)/(_max-_min), false);
 		}
 		
-		private function updateWidthPercent(percent:Number):void
+		private function updateWithPercent(percent:Number, manual:Boolean):void
 		{
+			percent = ToolSet.clamp01(percent);
+			if(manual)
+			{
+				var newValue:Number = ToolSet.clamp(_min+(_max-_min)*percent, _min, _max);
+				if(_wholeNumbers)
+				{
+					newValue = Math.round(newValue);
+					percent = ToolSet.clamp01((newValue-_min)/(_max-_min));
+				}
+
+				if(newValue!=_value)
+				{
+					_value = newValue;
+					dispatchEvent(new StateChangeEvent(StateChangeEvent.CHANGED));
+				}
+			}
+			
 			if(_titleObject)
 			{
 				switch(_titleType)
@@ -145,6 +192,8 @@ package fairygui
 				_titleType = ProgressTitleType.parse(str);
 			
 			_reverse = xml.@reverse=="true";
+			_wholeNumbers = xml.@wholeNumbers=="true";
+			changeOnClick = xml.@changeOnClick!="false";
 			
 			_titleObject = getChild("title") as GTextField;
 			_barObjectH = getChild("bar");
@@ -192,7 +241,14 @@ package fairygui
 			if(xml)
 			{
 				_value = parseInt(xml.@value);
+				if(isNaN(_value))
+					_value = 0;
 				_max = parseInt(xml.@max);
+				if(isNaN(_max))
+					_max = 0;
+				_min = parseInt(xml.@min);
+				if(isNaN(_min))
+					_min = 0;
 			}
 			
 			update();
@@ -205,7 +261,7 @@ package fairygui
 			evt.stopPropagation();
 			
 			_clickPos = this.globalToLocal(evt.stageX, evt.stageY);
-			_clickPercent = _value/_max;
+			_clickPercent = ToolSet.clamp01((_value-_min)/(_max-_min));
 		}
 		
 		private function __gripMouseMove(evt:GTouchEvent):void
@@ -222,23 +278,12 @@ package fairygui
 				deltaX = -deltaX;
 				deltaY = -deltaY;
 			}
-			
 			var percent:Number;
 			if(_barObjectH)
 				percent = _clickPercent + deltaX/_barMaxWidth;
 			else
 				percent = _clickPercent + deltaY/_barMaxHeight;
-			if(percent>1)
-				percent = 1;
-			else if(percent<0)
-				percent = 0;
-			var newValue:int = Math.round(_max*percent);
-			if(newValue!=_value)
-			{
-				_value = newValue;
-				dispatchEvent(new StateChangeEvent(StateChangeEvent.CHANGED));
-			}
-			updateWidthPercent(percent);
+			updateWithPercent(percent, true);
 		}
 		
 		private function __barMouseDown(evt:GTouchEvent):void
@@ -247,7 +292,7 @@ package fairygui
 				return;
 			
 			var pt:Point = _gripObject.globalToLocal(evt.stageX, evt.stageY);
-			var percent:Number = _value/_max;
+			var percent:Number = ToolSet.clamp01((_value-_min)/(_max-_min));
 			var delta:Number;
 			if(_barObjectH)
 				delta = (pt.x-_gripObject.width/2)/_barMaxWidth;
@@ -257,17 +302,7 @@ package fairygui
 				percent -= delta;
 			else
 				percent += delta;
-			if(percent>1)
-				percent = 1;
-			else if(percent<0)
-				percent = 0;
-			var newValue:int = Math.round(_max*percent);
-			if(newValue!=_value)
-			{
-				_value = newValue;
-				dispatchEvent(new StateChangeEvent(StateChangeEvent.CHANGED));
-			}
-			updateWidthPercent(percent);
+			updateWithPercent(percent, true);
 		}
 	}
 }

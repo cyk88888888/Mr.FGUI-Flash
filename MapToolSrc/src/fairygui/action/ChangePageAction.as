@@ -27,7 +27,17 @@ package fairygui.action
 			{
 				var cc:Controller = gcom.getController(controllerName);
 				if(cc && cc!=controller && !cc.changing)
-					cc.selectedPageId = targetPage;
+				{
+					if(targetPage=="~1")
+					{
+						if(controller.selectedIndex<cc.pageCount)
+							cc.selectedIndex = controller.selectedIndex;
+					}
+					else if(targetPage=="~2")
+						cc.selectedPage = controller.selectedPage;
+					else
+						cc.selectedPageId = targetPage;
+				}
 			}
 		}
 

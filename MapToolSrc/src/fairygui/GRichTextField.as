@@ -671,7 +671,7 @@ package fairygui
 			evt.stopPropagation();
 			
 			var node:HtmlNode = LinkButton(evt.currentTarget).owner;
-			var url:String =  node.element.text;
+			var url:String = node.element.text;
 			var i:int = url.indexOf("event:");
 			if(i==0)
 			{

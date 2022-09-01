@@ -16,6 +16,7 @@ package fairygui
 	import fairygui.utils.GTimers;
 	import fairygui.utils.PixelHitTestData;
 	import fairygui.utils.ToolSet;
+	import flash.events.IOErrorEvent;
 	
 	public class UIPackage
 	{
@@ -27,6 +28,8 @@ package fairygui
 		private var _itemsByName:Object;
 		private var _hitTestDatas:Object;
 		private var _customId:String;
+		private var _branches:Array;
+		internal var _branchIndex:int;
 		
 		private var _reader:IUIPackageReader;
 		
@@ -37,11 +40,15 @@ package fairygui
 		private static var _bitmapFonts:Object = {};
 		private static var _loadingQueue:Array = [];
 		private static var _stringsSource:Object = null;
+		private static var _branch:String = null;
+		private static var _vars:Object = {};
 		
 		public function UIPackage()
 		{
 			_items = new Vector.<PackageItem>();
 			_hitTestDatas = {};
+			_branches = [];
+			_branchIndex = -1;
 		}
 		
 		public static function getById(id:String):UIPackage
@@ -197,6 +204,37 @@ package fairygui
 				col[key3] = text;
 			}
 		}
+
+		public static function get branch():String
+		{
+			return _branch;
+		}
+
+		public static function set branch(value:String):void
+		{
+			_branch = value;
+			for(var pkgId:String in _packageInstById)
+			{
+				var pkg:UIPackage = _packageInstById[pkgId];
+				if(pkg._branches)
+				{
+					pkg._branchIndex = pkg._branches.indexOf(_branch);
+				}
+			}
+		}
+
+		public static function getVar(key:String):*
+		{
+			return _vars[key];
+		}
+
+		public static function setVar(key:String, value:*):void
+		{
+			if(value==undefined)
+				delete _vars[key];
+			else
+				_vars[key] = value;
+		}
 		
 		public static function loadingCount():int
 		{
@@ -221,23 +259,32 @@ package fairygui
 		{
 			_reader = reader;
 			
-			var str:String = _reader.readDescFile("package.xml");
-			
+			var str:String;
+			var pi:PackageItem;
+			var cxml:XML;
+			var arr:Array;
+
 			var ignoreWhitespace:Boolean = XML.ignoreWhitespace;
 			XML.ignoreWhitespace = true;
+			str = _reader.readDescFile("package.xml");
 			var xml:XML = new XML(str);
 			XML.ignoreWhitespace = ignoreWhitespace;
 			
 			_id = xml.@id;
 			_name = xml.@name;
-			
-			var resources:XMLList = xml.resources.elements();
-			
+			str = xml.@branches;
+			if(str)
+			{
+				_branches = str.split(",");
+				if(_branch)
+					_branchIndex = _branches.indexOf(_branch);
+			}
+
+			var branchIncluded:Boolean = _branches.length>0;
+
 			_itemsById = {};
 			_itemsByName = {};
-			var pi:PackageItem;
-			var cxml:XML;
-			var arr:Array;
+			var resources:XMLList = xml.resources.elements();
 			for each(cxml in resources)
 			{
 				pi = new PackageItem();
@@ -250,6 +297,19 @@ package fairygui
 				arr = str.split(",");
 				pi.width = int(arr[0]);
 				pi.height = int(arr[1]);
+
+				str = cxml.@branch;
+				if(str)
+					pi.name = str + "/" + pi.name;
+				str = cxml.@branches;
+				if(str)
+				{
+					if(branchIncluded)
+						pi.branches = str.split(",");
+					else
+						_itemsById[str] = pi;
+				}
+
 				switch(pi.type)
 				{
 					case PackageItemType.Image:
@@ -275,12 +335,18 @@ package fairygui
 						}
 						str = cxml.@smoothing;
 						pi.smoothing = str!="false";
+						str = cxml.@highRes;
+						if(str)
+							pi.highResolution = str.split(",");
 						break;
 					}
 						
 					case PackageItemType.MovieClip:
 						str = cxml.@smoothing;
 						pi.smoothing = str!="false";
+						str = cxml.@highRes;
+						if(str)
+							pi.highResolution = str.split(",");
 						break;
 						
 					case PackageItemType.Component:
@@ -504,6 +570,8 @@ package fairygui
 					{
 						if (tagName == "text" && cxml.@input=="true")
 							di = new DisplayListItem(null, "inputtext");
+						else if(tagName == "list" && cxml.@treeView=="true")
+							di = new DisplayListItem(null, "tree");
 						else
 							di = new DisplayListItem(null, tagName);
 					}
@@ -707,13 +775,22 @@ package fairygui
 		private function loadImage(pi:PackageItem):void
 		{
 			var ba:ByteArray = _reader.readResFile(pi.file);
+			if(ba==null)
+			{
+				trace("cannot load " + pi.file);
+				pi.completeLoading();
+				return;
+			}
+
 			var loader:PackageItemLoader = new PackageItemLoader();
 			loader.contentLoaderInfo.addEventListener(Event.COMPLETE, __imageLoaded);
-			loader.loadBytes(ba);
+			loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, __imageLoaded);
 			
 			loader.item = pi;
 			pi.loading = 1;
 			_loadingQueue.push(loader);
+
+			loader.loadBytes(ba);
 		}
 		
 		private function __imageLoaded(evt:Event):void
@@ -725,8 +802,11 @@ package fairygui
 			
 			_loadingQueue.splice(i, 1);
 			
-			var pi:PackageItem = loader.item; 
-			pi.image = Bitmap(loader.content).bitmapData;
+			var pi:PackageItem = loader.item;
+			if(loader.content)
+				pi.image = Bitmap(loader.content).bitmapData;
+			else
+				trace("load '" + pi.name + "," + pi.file + "' failed: " + evt.toString());
 			pi.completeLoading();
 		}
 		
@@ -793,7 +873,7 @@ package fairygui
 				str = frameNode.@sprite;
 				if (str)
 					str = item.id + "_" + str + ".png";
-				else				
+				else
 					str = item.id + "_" + i + ".png";
 				var ba:ByteArray = _reader.readResFile(str);
 				if(ba)
@@ -879,7 +959,7 @@ package fairygui
 					bg.offsetY = kv.yoffset;
 					bg.width = kv.width;
 					bg.height = kv.height;
-					bg.advance = kv.xadvance;					
+					bg.advance = kv.xadvance;
 					bg.channel = font.translateChannel(kv.chnl);
 					
 					if(!ttf)
@@ -889,9 +969,11 @@ package fairygui
 							var charImg:PackageItem = _itemsById[kv.img];
 							if(charImg!=null)
 							{
-								bg.imageItem = charImg;
+								charImg = charImg.getBranch();
 								bg.width = charImg.width;
 								bg.height = charImg.height;
+								charImg = charImg.getHighResolution();
+								bg.imageItem = charImg;
 								loadImage(charImg);
 							}
 						}

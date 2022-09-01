@@ -32,6 +32,8 @@ package fairygui
 	import fairygui.utils.GTimers;
 	import fairygui.utils.SimpleDispatcher;
 	import fairygui.utils.ToolSet;
+	import fairygui.gears.GearDisplay2;
+	import fairygui.gears.GearFontSize;
 	
 	[Event(name = "startDrag", type = "fairygui.event.DragEvent")]
 	[Event(name = "endDrag", type = "fairygui.event.DragEvent")]
@@ -62,10 +64,15 @@ package fairygui
 		private var _touchable:Boolean;
 		private var _grayed:Boolean;
 		private var _draggable:Boolean;
-		private var _scaleX:Number;
-		private var _scaleY:Number;		
 		private var _pivotX:Number;
 		private var _pivotY:Number;
+
+		protected var _scaleX:Number;
+		protected var _scaleY:Number;
+		protected var _yOffset:int;
+		protected var _displayObject:DisplayObject;
+		protected var _disposed:Boolean;
+
 		private var _pivotAsAnchor:Boolean;
 		private var _pivotOffsetX:Number;
 		private var _pivotOffsetY:Number;
@@ -76,17 +83,11 @@ package fairygui
 		private var _tooltips:String;
 		private var _pixelSnapping:Boolean;
 		private var _data:Object;
-		private var _disposed:Boolean;
 		
 		private var _relations:Relations;
 		private var _group:GGroup;
 		private var _gears:Vector.<GearBase>;
-		private var _displayObject:DisplayObject;
 		private var _dragBounds:Rectangle;
-		
-		protected var _yOffset:int;
-		//Size的实现方式，有两种，0-GObject的w/h等于DisplayObject的w/h。1-GObject的sourceWidth/sourceHeight等于DisplayObject的w/h，剩余部分由scale实现
-		protected var _sizeImplType:int;
 		
 		internal var _parent:GComponent;
 		internal var _dispatcher:SimpleDispatcher;
@@ -98,6 +99,7 @@ package fairygui
 		internal var _name:String;
 		internal var _underConstruct:Boolean;
 		internal var _sizePercentInGroup:Number;
+		internal var _treeNode:GTreeNode;
 		public var _gearLocked:Boolean;
 		
 		internal static var _gInstanceCounter:uint;
@@ -105,7 +107,9 @@ package fairygui
 		internal static const XY_CHANGED:int = 1;
 		internal static const SIZE_CHANGED:int = 2;
 		internal static const SIZE_DELAY_CHANGE:int = 3;
-		
+
+		internal static const MAX_GEAR_INDEX:int = 9;
+
 		public function GObject()
 		{
 			_x = 0;
@@ -140,7 +144,7 @@ package fairygui
 			
 			_relations = new Relations(this);
 			_dispatcher = new SimpleDispatcher();
-			_gears = new Vector.<GearBase>(8, true);
+			_gears = new Vector.<GearBase>(MAX_GEAR_INDEX+1, true);
 		}
 
 		final public function get id():String
@@ -205,7 +209,7 @@ package fairygui
 				{
 					_parent.setBoundsChangedFlag();
 					if (_group != null)
-						_group.setBoundsChangedFlag();
+						_group.setBoundsChangedFlag(true);
 					_dispatcher.dispatch(this, XY_CHANGED);
 				}
 				
@@ -316,6 +320,7 @@ package fairygui
 					wv = maxWidth;
 				if(maxHeight>0 && hv>maxHeight)
 					hv = maxHeight;
+
 				var dWidth:Number = wv-_width;
 				var dHeight:Number = hv-_height;
 				_width = wv;
@@ -341,10 +346,10 @@ package fairygui
 				
 				if(_parent)
 				{
-					_parent.setBoundsChangedFlag();					
+					_parent.setBoundsChangedFlag();
 					_relations.onOwnerSizeChanged(dWidth, dHeight, _pivotAsAnchor || !ignorePivot);
 					if (_group != null)
-						_group.setBoundsChangedFlag(true);
+						_group.setBoundsChangedFlag();
 				}
 				
 				_dispatcher.dispatch(this, SIZE_CHANGED);
@@ -601,17 +606,24 @@ package fairygui
 				handleVisibleChanged();
 				if(_parent)
 					_parent.setBoundsChangedFlag();
+				if(_group && _group.excludeInvisibles)
+					_group.setBoundsChangedFlag();
 			}
 		}
 
-		public function get internalVisible():Boolean
+		internal function get internalVisible():Boolean
 		{
 			return _internalVisible && (!_group || _group.internalVisible);
 		}
 		
-		public function get internalVisible2():Boolean
+		internal function get internalVisible2():Boolean
 		{
 			return _visible && (!_group || _group.internalVisible2);
+		}
+		
+		internal function get internalVisible3():Boolean
+		{
+			return _internalVisible && _visible;
 		}
 		
 		final public function get sortingOrder():int
@@ -738,10 +750,10 @@ package fairygui
 			if (_group != value)
 			{
 				if (_group != null)
-					_group.setBoundsChangedFlag(true);
+					_group.setBoundsChangedFlag();
 				_group = value;
 				if (_group != null)
-					_group.setBoundsChangedFlag(true);
+					_group.setBoundsChangedFlag();
 				handleVisibleChanged();
 				if (_parent != null)
 					_parent.childStateChanged(this);
@@ -753,42 +765,11 @@ package fairygui
 			return _group;
 		}
 		
-		final public function getGear(index:int):GearBase
+		public function getGear(index:int):GearBase
 		{
 			var gear:GearBase = _gears[index];
 			if (gear == null)
-			{
-				switch (index)
-				{
-					case 0:
-						gear = new GearDisplay(this);
-						break;
-					case 1:
-						gear = new GearXY(this);
-						break;
-					case 2:
-						gear = new GearSize(this);
-						break;
-					case 3:
-						gear = new GearLook(this);
-						break;
-					case 4:
-						gear = new GearColor(this);
-						break;
-					case 5:
-						gear = new GearAnimation(this);
-						break;
-					case 6:
-						gear = new GearText(this);
-						break;
-					case 7:
-						gear = new GearIcon(this);
-						break;
-					default:
-						throw new Error("FairyGUI: invalid gear index!");
-				}
-				_gears[index] = gear;
-			}
+				_gears[index] = gear = GearBase.create(this, index);
 			return gear;
 		}
 		
@@ -843,14 +824,26 @@ package fairygui
 				return;
 			
 			var connected:Boolean = _gears[0]==null || GearDisplay(_gears[0]).connected;
+			if(_gears[8]!=null)
+				connected = GearDisplay2(_gears[8]).evaluate(connected);
+
 			if(connected!=_internalVisible)
 			{
 				_internalVisible = connected;
 				if(_parent)
+				{
 					_parent.childStateChanged(this);
+					if(_group && _group.excludeInvisibles)
+						_group.setBoundsChangedFlag();
+				}
 			}
 		}
 
+		final public function get gearDisplay():GearDisplay
+		{
+			return GearDisplay(getGear(0));
+		}
+		
 		final public function get gearXY():GearXY
 		{
 			return GearXY(getGear(1));
@@ -966,6 +959,11 @@ package fairygui
 		{
 			return this as GList;
 		}
+
+		final public function get asTree():GTree
+		{
+			return this as GTree;
+		}
 		
 		final public function get asGraph():GGraph
 		{
@@ -1014,6 +1012,11 @@ package fairygui
 		public function set icon(value:String):void
 		{
 		}
+
+		final public function get treeNode():GTreeNode
+		{
+			return _treeNode;
+		}
 		
 		public function get isDisposed():Boolean
 		{
@@ -1028,12 +1031,14 @@ package fairygui
 			_disposed = true;
 			removeFromParent();
 			_relations.dispose();
-			for (var i:int = 0; i < 8; i++)
+			for (var i:int = 0; i <= MAX_GEAR_INDEX; i++)
 			{
 				var gear:GearBase = _gears[i];
 				if (gear != null)
 					gear.dispose();
 			}
+			
+			_group = null;
 		}
 
 		public function addClickListener(listener:Function):void
@@ -1090,12 +1095,7 @@ package fairygui
 				if(MTOUCH_EVENTS.indexOf(type)!=-1)
 					initMTouch();
 				else
-				{
-					if(type=="rightClick" && (this is GComponent))
-						GComponent(this).opaque = true;
-					
 					_displayObject.addEventListener(type, _reDispatch, useCapture, priority, useWeakReference);
-				}
 			}
 		}
 		
@@ -1286,7 +1286,7 @@ package fairygui
 				var xv:Number = _x;
 				var yv:Number = _y+_yOffset;
 				if(_pivotAsAnchor)
-				{					
+				{
 					xv -= _pivotX*_width;
 					yv -= _pivotY*_height;
 				}
@@ -1302,34 +1302,21 @@ package fairygui
 		
 		protected function handleSizeChanged():void
 		{
-			if(_displayObject!=null && _sizeImplType==1 && sourceWidth!=0 && sourceHeight!=0)
-			{
-				_displayObject.scaleX = _width/sourceWidth*_scaleX;
-				_displayObject.scaleY = _height/sourceHeight*_scaleY;
-			}
 		}
 		
 		protected function handleScaleChanged():void
 		{
 			if(_displayObject!=null)
 			{
-				if( _sizeImplType==0 || sourceWidth==0 || sourceHeight==0)
-				{
-					_displayObject.scaleX = _scaleX;
-					_displayObject.scaleY = _scaleY;
-				}
-				else
-				{
-					_displayObject.scaleX = _width/sourceWidth*_scaleX;
-					_displayObject.scaleY = _height/sourceHeight*_scaleY;
-				}
+				_displayObject.scaleX = _scaleX;
+				_displayObject.scaleY = _scaleY;
 			}
 		}
 		
 		public function handleControllerChanged(c:Controller):void
 		{
 			_handlingController = true;
-			for (var i:int = 0; i < 8; i++)
+			for (var i:int = 0; i <= MAX_GEAR_INDEX; i++)
 			{
 				var gear:GearBase = _gears[i];
 				if (gear != null && gear.controller == c)
@@ -1361,6 +1348,49 @@ package fairygui
 		{
 			if(_displayObject)
 				_displayObject.visible = internalVisible2;
+		}
+
+		public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Text:
+					return this.text;
+				case ObjectPropID.Icon:
+					return this.icon;
+				case ObjectPropID.Color:
+					return 0;
+				case ObjectPropID.OutlineColor:
+					return 0;
+				case ObjectPropID.Playing:
+					return false;
+				case ObjectPropID.Frame:
+					return 0;
+				case ObjectPropID.DeltaTime:
+					return 0;
+				case ObjectPropID.TimeScale:
+					return 1;
+				case ObjectPropID.FontSize:
+					return 0;
+				case ObjectPropID.Selected:
+					return false;
+				default:
+					return undefined;
+			}
+		}
+
+		public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Text:
+					this.text = value;
+					break;
+
+				case ObjectPropID.Icon:
+					this.icon = value;
+					break;
+			}
 		}
 		
 		public function constructFromResource():void
@@ -1457,17 +1487,7 @@ package fairygui
 				this.data = str;
 		}
 		
-		private static var GearXMLKeys:Object = {
-				"gearDisplay":0,
-				"gearXY":1,
-				"gearSize":2,
-				"gearLook":3,
-				"gearColor":4,
-				"gearAni":5,
-				"gearText":6,
-				"gearIcon":7
-			};
-		
+
 		public function setup_afterAdd(xml:XML):void
 		{
 			var s:String = xml.@group;
@@ -1477,9 +1497,9 @@ package fairygui
 			var col:Object = xml.elements();
 			for each(var cxml:XML in col)
 			{
-				var index:* = GearXMLKeys[cxml.name().localName];
-				if(index!=undefined)
-					getGear(int(index)).setup(cxml);
+				var index:int = GearBase.getIndexByName(cxml.name().localName);
+				if(index!=-1)
+					getGear(index).setup(cxml);
 			}
 		}
 		
@@ -1521,12 +1541,6 @@ package fairygui
 		
 		private function initMTouch():void
 		{
-			if(this is GComponent)
-			{	/*GComponent is by default not opaque for optimization.
-				if a click listener registered, we set opaque to true
-				*/
-				GComponent(this).opaque = true;
-			}
 			if(!GRoot.touchPointInput)
 			{
 				_displayObject.addEventListener(MouseEvent.MOUSE_DOWN, __mousedown);
@@ -1586,6 +1600,9 @@ package fairygui
 					&& Math.abs(_touchDownPoint.y - MouseEvent(evt).stageY) < sensitivity)
 					return;
 			}
+
+			if(evt is MouseEvent)
+				MouseEvent(evt).updateAfterEvent();
 			
 			var devt:GTouchEvent = new GTouchEvent(GTouchEvent.DRAG);
 			devt.copyFrom(evt);
@@ -1779,7 +1796,6 @@ package fairygui
 			var pt:Point = this.parent.globalToLocal(xx, yy);
 			this.setXY(Math.round(pt.x), Math.round(pt.y));
 			sUpdateInDragging = false;
-			
 			
 			var dragEvent:DragEvent = new DragEvent(DragEvent.DRAG_MOVING);
 			dragEvent.stageX = evt.stageX;

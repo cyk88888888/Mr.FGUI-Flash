@@ -9,7 +9,6 @@ package fairygui
 	import fairygui.event.StateChangeEvent;
 	import fairygui.utils.GTimers;
 	import fairygui.utils.ToolSet;
-	import fairygui.gears.IColorGear;
 	
 	[Event(name = "stateChanged", type = "fairygui.event.StateChangeEvent")]
 	public class GButton extends GComponent
@@ -333,8 +332,8 @@ package fairygui
 					for(var i:int=0;i<cnt;i++)
 					{
 						var obj:GObject = this.getChildAt(i);
-						if((obj is IColorGear) && !(obj is GTextField))
-							IColorGear(obj).color = color;
+						if(!(obj is GTextField))
+							obj.setProp(ObjectPropID.Color, color);
 					}
 				}
 				else
@@ -342,12 +341,12 @@ package fairygui
 					for(i=0;i<cnt;i++)
 					{
 						obj = this.getChildAt(i);
-						if((obj is IColorGear) && !(obj is GTextField))
-							IColorGear(obj).color = 0xFFFFFF;
+						if(!(obj is GTextField))
+							obj.setProp(ObjectPropID.Color, 0xFFFFFF);
 					}
 				}
 			}
-			else if(_downEffect==2)				
+			else if(_downEffect==2)
 			{
 				if(val==DOWN || val==SELECTED_OVER || val==SELECTED_DISABLED)
 				{
@@ -416,6 +415,55 @@ package fairygui
 				super.handleGrayedChanged();
 		}
 		
+		override public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					return this.titleColor;
+				case ObjectPropID.OutlineColor:
+					{
+						var tf:GTextField = getTextField();
+						if(tf)
+							return tf.strokeColor;
+						else
+							return 0;
+					}
+				case ObjectPropID.FontSize:
+					return this.titleFontSize;
+				case ObjectPropID.Selected:
+					return this.selected;
+				default:
+					return super.getProp(index);
+			}
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					this.titleColor = value;
+					break;
+				case ObjectPropID.OutlineColor:
+					{
+						var tf:GTextField = getTextField();
+						if(tf)
+							tf.strokeColor = value;
+					}
+					break;
+				case ObjectPropID.FontSize:
+					this.titleFontSize = value;
+					break;
+				case ObjectPropID.Selected:
+					this.selected = value;
+					break;
+				default:
+					super.setProp(index, value);
+					break;
+			}
+		}
+
 		override protected function constructFromXML(xml:XML):void
 		{
 			super.constructFromXML(xml);

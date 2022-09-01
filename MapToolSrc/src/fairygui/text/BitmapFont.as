@@ -14,7 +14,7 @@ package fairygui.text
 		public var ttf:Boolean;
 		public var resizable:Boolean;
 		public var colored:Boolean;
-		public var atlas:BitmapData;		
+		public var atlas:BitmapData;
 		public var glyphs:Object;
 		
 		public function BitmapFont()
@@ -91,7 +91,7 @@ package fairygui.text
 			if(drawBmd!=null)
 			{
 				sHelperMat.identity();
-				sHelperMat.scale(fontScale, fontScale);
+				sHelperMat.scale(fontScale*glyph.width/drawBmd.width, fontScale*glyph.height/drawBmd.height);
 				sHelperMat.translate(charPosX, charPosY);
 				sHelperRect.x = charPosX;
 				sHelperRect.y = charPosY;

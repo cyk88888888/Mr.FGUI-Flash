@@ -3,9 +3,11 @@ package fairygui
 	import fairygui.tween.EaseType;
 	import fairygui.tween.GTween;
 	import fairygui.tween.GTweener;
+	import fairygui.utils.ToolSet;
 
 	public class GProgressBar extends GComponent
 	{
+		private var _min:Number;
 		private var _max:Number;
 		private var _value:Number;
 		private var _titleType:int;
@@ -45,6 +47,21 @@ package fairygui
 			}
 		}
 
+		final public function get min():Number
+		{
+			return _min;
+		}
+
+		final public function set min(value:Number):void
+		{
+			if(_min != value)
+			{
+				_min = value;
+				update(_value);
+			}
+		}
+
+
 		final public function get max():Number
 		{
 			return _max;
@@ -71,6 +88,11 @@ package fairygui
 				GTween.kill(this, false, this.update);
 				
 				_value = value;
+				if(_value<_min)
+					_value = _min;
+				if(_value>_max)
+					_value = _max;
+
 				update(_value);
 			}
 		}
@@ -88,14 +110,14 @@ package fairygui
 			else
 				oldValule = _value;
 			
-			_value = value;				
+			_value = value;
 			return GTween.to(oldValule, _value, duration).setTarget(this, this.update).setEase(EaseType.Linear);
 
 		}
 		
 		public function update(newValue:int):void
 		{
-			var percent:Number = _max!=0?Math.min(newValue/_max,1):0;
+			var percent:Number = ToolSet.clamp01((_value-_min)/(_max-_min));
 			if(_titleObject)
 			{
 				switch(_titleType)
@@ -204,6 +226,9 @@ package fairygui
 				_max = parseInt(xml.@max);
 				if(isNaN(_max))
 					_max = 0;
+				_min = parseInt(xml.@min);
+				if(isNaN(_min))
+					_min = 0;
 			}
 			update(_value);
 		}

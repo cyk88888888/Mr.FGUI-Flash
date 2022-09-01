@@ -10,6 +10,10 @@ package fairygui.event
 		{
 			super(type, false, false);
 		}
+	
+		override public function clone():Event {
+			return new StateChangeEvent(type);
+		}
 	}
 	
 }

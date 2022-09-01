@@ -31,23 +31,25 @@ package fairygui
 			_vertical = vertical;
 		}
 
-		public function set displayPerc(val:Number):void
+		public function setDisplayPerc(value:Number):void
 		{
 			if(_vertical)
 			{
 				if(!_fixedGripSize)
-					_grip.height = Math.floor(val*_bar.height);
+					_grip.height = Math.floor(value*_bar.height);
 				_grip.y = _bar.y+(_bar.height-_grip.height)*_scrollPerc;
 			}
 			else
 			{
 				if(!_fixedGripSize)
-					_grip.width = Math.floor(val*_bar.width);
+					_grip.width = Math.floor(value*_bar.width);
 				_grip.x = _bar.x+(_bar.width-_grip.width)*_scrollPerc;
 			}
+
+			_grip.visible = value!=0 && value!=1;
 		}
 		
-		public function set scrollPerc(val:Number):void
+		public function setScrollPerc(val:Number):void
 		{
 			_scrollPerc = val;
 			if(_vertical)
@@ -63,6 +65,11 @@ package fairygui
 			else
 				return (_arrowButton1!=null?_arrowButton1.width:0)+(_arrowButton2!=null?_arrowButton2.width:0);
 		}
+
+		public function get gripDragging():Boolean
+		{
+			return _grip && _grip.isDown;
+		}
 		
 		override protected function constructFromXML(xml:XML):void
 		{
@@ -70,7 +77,7 @@ package fairygui
 			
 			xml = xml.ScrollBar[0];
 			if(xml!=null)
-				_fixedGripSize = xml.@fixedGripSize=="true";							
+				_fixedGripSize = xml.@fixedGripSize=="true";
 			
 			_grip = getChild("grip");
 			if(!_grip)
@@ -91,6 +98,7 @@ package fairygui
 			
 			_grip.addEventListener(GTouchEvent.BEGIN, __gripMouseDown);
 			_grip.addEventListener(GTouchEvent.DRAG, __gripDragging);
+			_grip.addEventListener(GTouchEvent.END, __gripMouseUp);
 
 			if(_arrowButton1)
 				_arrowButton1.addEventListener(GTouchEvent.BEGIN, __arrowButton1Click);
@@ -110,6 +118,11 @@ package fairygui
 			_dragOffset = this.globalToLocal(evt.stageX, evt.stageY);
 			_dragOffset.x -= _grip.x;
 			_dragOffset.y -= _grip.y;
+		}
+
+		private function __gripMouseUp(evt:GTouchEvent):void
+		{
+			_target.updateScrollBarVisible();
 		}
 		
 		private function __gripDragging(evt:GTouchEvent):void

@@ -22,6 +22,9 @@ package fairygui
 		public var callbacks:Array = [];
 		public var loading:int;
 		public var loaded:Boolean;
+
+		public var highResolution:Array;
+		public var branches:Array;
 		
 		//image
 		public var scale9Grid:Rectangle;
@@ -78,6 +81,30 @@ package fairygui
 			for each(var callback:Function in arr)
 				callback(this);
 			callbacks.length = 0;
+		}
+
+		public function getBranch():PackageItem
+		{
+			if(branches && owner._branchIndex!=-1)
+			{
+				var itemId:String = branches[owner._branchIndex];
+				if(itemId)
+					return owner.getItemById(itemId);
+			}
+
+			return this;
+		}
+
+		public function getHighResolution():PackageItem
+		{	
+			if(highResolution && GRoot.contentScaleLevel>0)
+			{
+				var itemId:String = highResolution[GRoot.contentScaleLevel-1];
+				if(itemId)
+					return owner.getItemById(itemId);
+			}
+
+			return this;
 		}
 		
 		public function toString():String

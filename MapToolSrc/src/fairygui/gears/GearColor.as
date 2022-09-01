@@ -5,6 +5,7 @@ package fairygui.gears
 	import fairygui.utils.ToolSet;
 	import fairygui.GObject;
 	import fairygui.UIPackage;
+	import fairygui.ObjectPropID;
 
 	public class GearColor extends GearBase
 	{
@@ -13,15 +14,13 @@ package fairygui.gears
 		
 		public function GearColor(owner:GObject)
 		{
-			super(owner);			
+			super(owner);
 		}
 		
 		override protected function init():void
 		{
-			if(_owner is ITextColorGear)
-				_default = new GearColorValue(IColorGear(_owner).color, ITextColorGear(_owner).strokeColor);
-			else
-				_default = new GearColorValue(IColorGear(_owner).color);
+			_default = new GearColorValue(_owner.getProp(ObjectPropID.Color), 
+				_owner.getProp(ObjectPropID.OutlineColor));
 			_storage = {};
 		}
 		
@@ -60,10 +59,10 @@ package fairygui.gears
 			
 			if(_tweenConfig != null && _tweenConfig.tween && !UIPackage._constructing && !disableAllTweenEffect)
 			{
-				if((_owner is ITextColorGear) && gv.strokeColor!=0xFF000000)
+				if(gv.strokeColor!=0xFF000000)
 				{
-					_owner._gearLocked = true;	
-					ITextColorGear(_owner).strokeColor = gv.strokeColor;
+					_owner._gearLocked = true;
+					_owner.setProp(ObjectPropID.OutlineColor, gv.strokeColor);
 					_owner._gearLocked = false;
 				}
 				
@@ -78,12 +77,13 @@ package fairygui.gears
 						return;
 				}
 				
-				if (IColorGear(_owner).color != gv.color)
+				var curColor:uint = _owner.getProp(ObjectPropID.Color);
+				if (curColor != gv.color)
 				{
 					if (_owner.checkGearController(0, _controller))
 						_tweenConfig._displayLockToken = _owner.addDisplayLock();
 					
-					_tweenConfig._tweener = GTween.toColor(IColorGear(_owner).color, gv.color, _tweenConfig.duration)
+					_tweenConfig._tweener = GTween.toColor(curColor, gv.color, _tweenConfig.duration)
 						.setDelay(_tweenConfig.delay)
 						.setEase(_tweenConfig.easeType)
 						.setTarget(this)
@@ -93,19 +93,19 @@ package fairygui.gears
 			}
 			else
 			{
-				_owner._gearLocked = true;	
-				IColorGear(_owner).color = gv.color;
-				if((_owner is ITextColorGear) && gv.strokeColor!=0xFF000000)
-					ITextColorGear(_owner).strokeColor = gv.strokeColor;
+				_owner._gearLocked = true;
+				_owner.setProp(ObjectPropID.Color, gv.color);
+				if(gv.strokeColor!=0xFF000000)
+					_owner.setProp(ObjectPropID.OutlineColor, gv.strokeColor);
 				_owner._gearLocked = false;
 			}
 		}
 		
 		private function __tweenUpdate(tweener:GTweener):void
 		{
-			_owner._gearLocked = true;	
-			IColorGear(_owner).color = tweener.value.color;
-			_owner._gearLocked = false;	
+			_owner._gearLocked = true;
+			_owner.setProp(ObjectPropID.Color, tweener.value.color);
+			_owner._gearLocked = false;
 		}
 		
 		private function __tweenComplete():void
@@ -127,9 +127,8 @@ package fairygui.gears
 				_storage[_controller.selectedPageId] = gv;
 			}
 			
-			gv.color = IColorGear(_owner).color;
-			if(_owner is ITextColorGear)
-				gv.strokeColor = ITextColorGear(_owner).strokeColor;
+			gv.color = _owner.getProp(ObjectPropID.Color);
+			gv.strokeColor = _owner.getProp(ObjectPropID.OutlineColor);
 		}
 	}
 }

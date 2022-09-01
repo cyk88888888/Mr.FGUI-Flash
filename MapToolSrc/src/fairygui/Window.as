@@ -1,10 +1,5 @@
 package fairygui
 {
-	import framework.base.Global;
-	import framework.base.ModelFacade;
-	import com.simpvmc.Notification;
-	import com.simpvmc.NotifierBase;
-	
 	import flash.events.Event;
 	import flash.events.MouseEvent;
 	import flash.geom.Point;
@@ -28,12 +23,10 @@ package fairygui
 		protected var _requestingCmd:int;
 		
 		public var bringToFontOnClick:Boolean;
-		protected static var _model:ModelFacade;
+
 		public function Window():void
 		{
 			super();
-			_model = Global.model;
-			onEnter();
 			this.focusable = true;
 			_uiSources = new Vector.<IUISource>();
 			bringToFontOnClick = UIConfig.bringWindowToFrontOnClick;
@@ -366,37 +359,6 @@ package fairygui
 			evt.preventDefault();
 			
 			this.startDrag(evt.touchPointID);
-		}
-		protected function onEnter():void {
-			
-		}
-		private var _msgHandler:Object = {};
-		protected function onEmmiter(ntfyName:String, proc:Function):void {
-			_msgHandler[ntfyName] = proc;
-			NotifierBase.stage4ntfy.addEventListener(/*Notification.MvC_ + */ntfyName, onMvCMessage);
-		}
-		
-		protected function un(ntfName:String):void {
-			delete _msgHandler[ntfName];
-			NotifierBase.stage4ntfy.removeEventListener(/*Notification.MvC_ + */ntfName, onMvCMessage);
-		}
-		
-		protected function unAll():void {
-			for (var ntfName:String in _msgHandler) {
-				delete _msgHandler[ntfName];
-				NotifierBase.stage4ntfy.removeEventListener(/*Notification.MvC_ + */ntfName, onMvCMessage);
-			}
-		}
-		
-		private function onMvCMessage(ntfy:Notification):void {
-			var msgHandler:Function = _msgHandler[ntfy.name];
-			if (msgHandler != null) {
-				if (msgHandler.length == 0) {
-					msgHandler();
-				} else {
-					msgHandler(ntfy);
-				}
-			}
 		}
 	}
 }

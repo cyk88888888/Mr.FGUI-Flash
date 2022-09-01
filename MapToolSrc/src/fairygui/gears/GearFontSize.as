@@ -1,29 +1,30 @@
 package fairygui.gears
 {
 	import fairygui.GObject;
+	import fairygui.ObjectPropID;
 
-	public class GearText extends GearBase
+	public class GearFontSize extends GearBase
 	{
 		private var _storage:Object;
-		private var _default:String;
+		private var _default:int;
 		
-		public function GearText(owner:GObject)
+		public function GearFontSize(owner:GObject)
 		{
 			super(owner);
 		}
 		
 		override protected function init():void
 		{
-			_default = _owner.text;
+			_default = _owner.getProp(ObjectPropID.FontSize);
 			_storage = {};
 		}
 		
 		override protected function addStatus(pageId:String, value:String):void
 		{
 			if(pageId==null)
-				_default = value;
+				_default = parseInt(value);
 			else
-				_storage[pageId] = value; 
+				_storage[pageId] = value;
 		}
 		
 		override public function apply():void
@@ -32,9 +33,9 @@ package fairygui.gears
 
 			var data:* = _storage[_controller.selectedPageId];
 			if(data!=undefined)
-				_owner.text = String(data);
+				_owner.setProp(ObjectPropID.FontSize, int(data));
 			else
-				_owner.text = _default;
+				_owner.setProp(ObjectPropID.FontSize, _default);
 			
 			_owner._gearLocked = false;
 		}

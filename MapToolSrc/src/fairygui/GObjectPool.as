@@ -39,7 +39,7 @@ package fairygui
 		}
 		
 		public function getObject(url:String):GObject
-		{			
+		{
 			url = UIPackage.normalizeURL(url);
 			if(url==null)
 				return null;

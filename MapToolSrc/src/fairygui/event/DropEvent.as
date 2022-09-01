@@ -13,5 +13,9 @@ package fairygui.event
 			super(type, false, false);
 			this.source = source;
 		}
+
+		override public function clone():Event {
+			return new DropEvent(type, source);
+		}
 	}
 }

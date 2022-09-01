@@ -210,11 +210,6 @@ package fairygui.utils
 			return result;
 		}
 		
-		public static var defaultUBBParser:UBBParser = new UBBParser();
-		public static function parseUBB(text:String):String {
-			return defaultUBBParser.parse(text);
-		}
-		
 		private static var tileIndice:Array = [ -1, 0, -1, 2, 4, 3, -1, 1, -1 ];
 		public static function scaleBitmapWith9Grid(source:BitmapData, scale9Grid:Rectangle,
 													wantWidth:int, wantHeight:int, smoothing:Boolean=false, tileGridIndice:int=0):BitmapData {
@@ -317,7 +312,7 @@ package fairygui.utils
 		
 		public static function clamp(value:Number, min:Number, max:Number):Number
 		{
-			if(value<min)
+			if(isNaN(value) || value<min)
 				value = min;
 			else if(value>max)
 				value = max;
@@ -326,7 +321,9 @@ package fairygui.utils
 		
 		public static function clamp01(value:Number):Number
 		{
-			if(value>1)
+			if(isNaN(value))
+				value = 0;
+			else if(value>1)
 				value = 1;
 			else if(value<0)
 				value = 0;
@@ -336,6 +333,59 @@ package fairygui.utils
 		public static function lerp(start:Number, end:Number, percent:Number):Number
 		{
 			return (start + percent*(end - start));
+		}
+		
+		public static function distance(x1:Number, y1:Number, x2:Number, y2:Number):Number
+		{
+			return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+		}
+		
+		public static function repeat(t:Number, length:Number):Number
+		{
+			return t - Math.floor(t / length) * length;
+		}
+
+		public static function pointLineDistance(pointX:Number, pointY:Number, startX:Number, startY:Number,
+			endX:Number, endY:Number, isSegment:Boolean):Number
+		{
+			var dx:Number = endX - startX;
+			var dy:Number = endY - startY;
+			var d:Number = dx*dx + dy*dy;
+			var t:Number = ((pointX - startX) * dx + (pointY - startY) * dy) / d;
+			var px:Number;
+			var py:Number;
+
+			if (!isSegment) {
+				px = startX + t * dx;
+				py = startY + t * dy;
+			}
+			else {
+				if (d!=0) {
+					if (t < 0)
+					{
+						px = startX;
+						py = startY;
+					}
+					else if (t > 1)
+					{
+						px = endX;
+						py = endY;
+					}
+					else
+					{
+						px = startX + t * dx;
+						py = startY + t * dy;
+					}
+				}
+				else {
+					px = startX;
+					py = startY;
+				}
+			}
+				
+			dx = pointX - px;
+			dy = pointY - py;
+			return Math.sqrt(dx*dx + dy*dy);
 		}
 	}
 }

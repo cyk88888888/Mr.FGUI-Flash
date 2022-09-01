@@ -12,6 +12,38 @@ package fairygui.gears
 		protected var _controller:Controller;
 		protected var _tweenConfig:GearTweenConfig;
 		
+		private static var Classes:Array = null;
+
+		private static const NameToIndex:Object = {
+			"gearDisplay":0,
+			"gearXY":1,
+			"gearSize":2,
+			"gearLook":3,
+			"gearColor":4,
+			"gearAni":5,
+			"gearText":6,
+			"gearIcon":7,
+			"gearDisplay2":8,
+			"gearFontSize":9
+		};
+
+		public static function create(owner: GObject, index: int): GearBase {
+			if(!Classes)
+			 Classes = [
+					GearDisplay, GearXY, GearSize, GearLook, GearColor,
+					GearAnimation, GearText, GearIcon, GearDisplay2, GearFontSize
+				];
+			return new GearBase.Classes[index](owner);
+		}
+
+		public static function getIndexByName(name:String):int {
+			var index:* = NameToIndex[name];
+			if(index==undefined)
+				return -1;
+			else
+				return int(index);
+		}
+
 		public function GearBase(owner:GObject)
 		{
 			_owner = owner;
@@ -73,24 +105,22 @@ package fairygui.gears
 					_tweenConfig.delay = parseFloat(str);
 			}
 			
+			var pages:Array;
+			var values:Array;
+			
+			str = xml.@pages;
+			if(str)
+				pages = str.split(",");
+				
 			if(this is GearDisplay)
+				GearDisplay(this).pages = pages;
+			else if(this is GearDisplay2)
 			{
-				str = xml.@pages;
-				if(str)
-				{
-					var arr:Array = str.split(",");
-					GearDisplay(this).pages = arr;
-				}
+				GearDisplay2(this).pages = pages;
+				GearDisplay2(this).condition = xml.@condition;
 			}
 			else
 			{
-				var pages:Array;
-				var values:Array;
-				
-				str = xml.@pages;
-				if(str)
-					pages = str.split(",");
-				
 				if(pages)
 				{
 					str = xml.@values;

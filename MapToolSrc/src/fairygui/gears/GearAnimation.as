@@ -1,6 +1,7 @@
 package fairygui.gears
 {
 	import fairygui.GObject;
+	import fairygui.ObjectPropID;
 
 	public class GearAnimation extends GearBase
 	{
@@ -14,7 +15,8 @@ package fairygui.gears
 		
 		override protected function init():void
 		{
-			_default = new GearAnimationValue(IAnimationGear(_owner).playing, IAnimationGear(_owner).frame);
+			_default = new GearAnimationValue(_owner.getProp(ObjectPropID.Playing),
+				_owner.getProp(ObjectPropID.Frame));
 			_storage = {};
 		}
 		
@@ -44,15 +46,14 @@ package fairygui.gears
 			if(!gv)
 				gv = _default;
 			
-			IAnimationGear(_owner).playing = gv.playing;
-			IAnimationGear(_owner).frame = gv.frame;
+			_owner.setProp(ObjectPropID.Playing, gv.playing);
+			_owner.setProp(ObjectPropID.Frame, gv.frame);
 			
 			_owner._gearLocked = false;
 		}
 		
 		override public function updateState():void
 		{
-			var mc:IAnimationGear = IAnimationGear(_owner);
 			var gv:GearAnimationValue = _storage[_controller.selectedPageId];
 			if(!gv)
 			{
@@ -60,8 +61,8 @@ package fairygui.gears
 				_storage[_controller.selectedPageId] = gv;
 			}
 			
-			gv.playing = mc.playing;
-			gv.frame = mc.frame;
+			gv.playing = _owner.getProp(ObjectPropID.Playing);
+			gv.frame = _owner.getProp(ObjectPropID.Frame);
 		}
 	}
 }

@@ -206,6 +206,8 @@ package fairygui
 			var index:int = _values.indexOf(val);
 			if(index==-1 && val==null)
 				index = _values.indexOf("");
+			if(index==-1)
+				index = 0;
 			this.selectedIndex = index;
 		}
 		
@@ -233,6 +235,18 @@ package fairygui
 				setState(_over?GButton.OVER:GButton.UP);
 		}
 		
+		public function getTextField():GTextField
+		{
+			if(_titleObject is GTextField)
+				return GTextField(_titleObject);
+			else if(_titleObject is GLabel)
+				return GLabel(_titleObject).getTextField();
+			else if(_titleObject is GButton)
+				return GButton(_titleObject).getTextField();
+			else
+				return null;
+		}
+
 		override protected function handleGrayedChanged():void
 		{
 			if(_buttonController && _buttonController.hasPage(GButton.DISABLED))
@@ -275,6 +289,60 @@ package fairygui
 			}
 			
 			super.dispose();
+		}
+
+		override public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					return this.titleColor;
+				case ObjectPropID.OutlineColor:
+					{
+						var tf:GTextField = getTextField();
+						if(tf)
+							return tf.strokeColor;
+						else
+							return 0;
+					}
+				case ObjectPropID.FontSize:
+					{
+						tf = getTextField();
+						if(tf)
+							return tf.fontSize;
+						else
+							return 0;
+					}
+				default:
+					return super.getProp(index);
+			}
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					this.titleColor = value;
+					break;
+				case ObjectPropID.OutlineColor:
+					{
+						var tf:GTextField = getTextField();
+						if(tf)
+							tf.strokeColor = value;
+					}
+					break;
+				case ObjectPropID.FontSize:
+					{
+						tf = getTextField();
+						if(tf)
+							tf.fontSize = value;
+					}
+					break;
+				default:
+					super.setProp(index, value);
+					break;
+			}
 		}
 		
 		override protected function constructFromXML(xml:XML):void
@@ -411,6 +479,7 @@ package fairygui
 			}
 			_list.selectedIndex = -1;
 			dropdown.width = this.width;
+			_list.ensureBoundsCorrect();
 			
 			this.root.togglePopup(dropdown, this, _popupDownward);
 			if(dropdown.parent)

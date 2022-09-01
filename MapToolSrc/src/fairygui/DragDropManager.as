@@ -1,9 +1,11 @@
 package fairygui
 {
+	import flash.display.Stage;
 	import flash.geom.Point;
 	
 	import fairygui.event.DragEvent;
 	import fairygui.event.DropEvent;
+	import flash.display.BitmapData;
 	
 	public class DragDropManager
 	{
@@ -41,13 +43,16 @@ package fairygui
 			return _agent.parent!=null;
 		}
 		
-		public function startDrag(source:GObject, icon:String, sourceData:Object, touchPointId:int = -1):void
+		public function startDrag(source:GObject, icon:*, sourceData:Object, touchPointId:int = -1):void
 		{
 			if(_agent.parent!=null)
 				return;
 			
 			_sourceData = sourceData;
-			_agent.url = icon;
+			if(icon is BitmapData)
+				_agent.texture = BitmapData(icon);
+			else
+				_agent.url = icon;
 			GRoot.inst.addChild(_agent);
 			var pt:Point = GRoot.inst.globalToLocal(source.displayObject.stage.mouseX, source.displayObject.stage.mouseY);
 			_agent.setXY(pt.x, pt.y);
@@ -60,6 +65,7 @@ package fairygui
 			{
 				_agent.stopDrag();
 				GRoot.inst.removeChild(_agent);
+				_agent.url = null;
 				_sourceData = null;
 			}
 		}
@@ -69,6 +75,7 @@ package fairygui
 			if(_agent.parent==null) //cancelled
 				return;
 			
+			_agent.url = null;
 			GRoot.inst.removeChild(_agent);
 
 			var sourceData:Object = _sourceData;
@@ -82,7 +89,7 @@ package fairygui
 					var dropEvt:DropEvent = new DropEvent(DropEvent.DROP, sourceData);
 					obj.requestFocus();
 					obj.dispatchEvent(dropEvt);
-					return;		
+					return;
 				}
 				
 				obj = obj.parent;

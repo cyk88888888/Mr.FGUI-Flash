@@ -9,15 +9,15 @@ package fairygui
 	
 	import fairygui.display.UIImage;
 	import fairygui.display.UITextField;
-	import fairygui.gears.ITextColorGear;
 	import fairygui.text.BMGlyph;
 	import fairygui.text.BitmapFont;
 	import fairygui.utils.CharSize;
 	import fairygui.utils.FontUtils;
 	import fairygui.utils.GTimers;
 	import fairygui.utils.ToolSet;
+	import fairygui.utils.UBBParser;
 
-	public class GTextField extends GObject implements ITextColorGear
+	public class GTextField extends GObject
 	{
 		protected var _ubbEnabled:Boolean;
 		protected var _autoSize:int;
@@ -373,10 +373,6 @@ package fairygui
 			return _ubbEnabled;
 		}
 		
-		public function get textField():TextField{
-			return _textField;
-		}
-		
 		public function set autoSize(value:int):void
 		{
 			if(_autoSize!=value)
@@ -485,8 +481,8 @@ package fairygui
 		{
 			if(_ubbEnabled)
 			{
-				_textField.htmlText = ToolSet.parseUBB(ToolSet.encodeHTML(value));
-				_maxFontSize = Math.max(_maxFontSize, ToolSet.defaultUBBParser.maxFontSize);
+				_textField.htmlText = UBBParser.inst.parse(ToolSet.encodeHTML(value));
+				_maxFontSize = Math.max(_maxFontSize, UBBParser.inst.maxFontSize);
 			}
 			else
 				_textField.text = value;
@@ -527,7 +523,7 @@ package fairygui
 			if(_textHeight>0)
 			{
 				if(_textField.numLines==1) //单行时文本高度的测算可能受leading的影响（flash问题），所以不使用textHeight
-				{			
+				{
 					_textHeight = CharSize.getSize(_maxFontSize, _textFormat.font, _textFormat.bold).height;
 				}
 				_textHeight += 4;
@@ -535,11 +531,14 @@ package fairygui
 
 			if(_widthAutoSize)
 				w = _textWidth;
+			else
+				w = _width;
 
 			if(_heightAutoSize)
 				h = _textHeight;
 			else
 				h = _height;
+
 			if(maxHeight>0 && h>maxHeight)
 				h = maxHeight;
 			if(_textHeight>h)
@@ -547,9 +546,16 @@ package fairygui
 			
 			_textField.height = _textHeight + _fontAdjustment + 3;
 
-			_updatingSize = true;
-			this.setSize(w,h);
-			_updatingSize = false;
+			if(_widthAutoSize || _heightAutoSize)
+			{
+				_updatingSize = true;
+				if(_parent && _parent._underConstruct
+					&& _rawWidth==w && _rawHeight==h)
+					_dispatcher.dispatch(this, SIZE_CHANGED);
+				else
+					setSize(w,h);
+				_updatingSize = false;
+			}
 			
 			doAlign();
 		}
@@ -741,18 +747,24 @@ package fairygui
 			if(_widthAutoSize)
 				w = _textWidth;
 			else
-				w = this.width;
-			
+				w = _width;
 			if(_heightAutoSize)
 				h = _textHeight;
 			else
-				h = this.height;
+				h = _height;
 			if(maxHeight>0 && h>maxHeight)
 				h = maxHeight;
 			
-			_updatingSize = true;
-			this.setSize(w,h);
-			_updatingSize = false;
+			if(_widthAutoSize || _heightAutoSize)
+			{
+				_updatingSize = true;
+				if(_parent && _parent._underConstruct
+					&& _rawWidth==w && _rawHeight==h)
+					_dispatcher.dispatch(this, SIZE_CHANGED);
+				else
+					setSize(w,h);
+				_updatingSize = false;
+			}
 			
 			doAlign();
 			
@@ -775,7 +787,7 @@ package fairygui
 				line = _lines[i];
 				charX = GUTTER_X;
 				
-				if (_align ==  AlignType.Center)
+				if (_align == AlignType.Center)
 					lineIndent = (rectWidth - line.width) / 2;
 				else if (_align == AlignType.Right)
 					lineIndent = rectWidth - line.width;
@@ -830,7 +842,7 @@ package fairygui
 					continue;
 				}
 				
-				result += template.substring(pos1, pos2);				
+				result += template.substring(pos1, pos2);
 				pos1 = pos2;
 				pos2 = template.indexOf("}", pos1);
 				if(pos2==-1)
@@ -879,7 +891,7 @@ package fairygui
 				return;
 			
 			_templateVars = value;
-			flushVars();			
+			flushVars();
 		}
 		
 		public function setVar(name:String, value:String):GTextField
@@ -933,6 +945,40 @@ package fairygui
 			
 			_yOffset -=_fontAdjustment;
 			displayObject.y = this.y+_yOffset;
+		}
+
+		override public function getProp(index:int):*
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					return this.color;
+				case ObjectPropID.OutlineColor:
+					return this.strokeColor;
+				case ObjectPropID.FontSize:
+					return this.fontSize;
+				default:
+					return super.getProp(index);
+			}
+		}
+
+		override public function setProp(index:int, value:*):void
+		{
+			switch(index)
+			{
+				case ObjectPropID.Color:
+					this.color = value;
+					break;
+				case ObjectPropID.OutlineColor:
+					this.strokeColor = value;
+					break;
+				case ObjectPropID.FontSize:
+					this.fontSize = value;
+					break;
+				default:
+					super.setProp(index, value);
+					break;
+			}
 		}
 		
 		override public function setup_beforeAdd(xml:XML):void

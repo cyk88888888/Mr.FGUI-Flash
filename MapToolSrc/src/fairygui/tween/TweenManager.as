@@ -36,9 +36,6 @@ package fairygui.tween
 			tweener._init();
 			_activeTweens[_totalActiveTweens++] = tweener;
 			
-			if (_totalActiveTweens == _activeTweens.length)
-				_activeTweens.length = _activeTweens.length + Math.ceil(_activeTweens.length * 0.5);
-			
 			return tweener;
 		}
 		
@@ -110,7 +107,6 @@ package fairygui.tween
 			
 			var cnt:int = _totalActiveTweens;
 			var freePosStart:int = -1;
-			var freePosCount:int = 0;
 			for (var i:int = 0; i < cnt; i++)
 			{
 				var tweener:GTweener = _activeTweens[i];
@@ -118,7 +114,6 @@ package fairygui.tween
 				{
 					if (freePosStart == -1)
 						freePosStart = i;
-					freePosCount++;
 				}
 				else if (tweener._killed)
 				{
@@ -128,7 +123,6 @@ package fairygui.tween
 					
 					if (freePosStart == -1)
 						freePosStart = i;
-					freePosCount++;
 				}
 				else
 				{

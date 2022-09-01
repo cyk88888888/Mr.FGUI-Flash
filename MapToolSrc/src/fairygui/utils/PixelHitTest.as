@@ -44,7 +44,7 @@ package fairygui.utils
 						}
 					}
 				}
-				g.endFill();				
+				g.endFill();
 			}
 			
 			var sprite:Sprite = new Sprite();

@@ -16,6 +16,8 @@ package fairygui.utils
 		
 		public var maxFontSize:int = 0;
 		
+		public var unrecognizedTags:Object = {};
+		
 		public static var inst:UBBParser = new UBBParser();
 		
 		public function UBBParser()
@@ -137,7 +139,7 @@ package fairygui.utils
 			return result;
 		}		
 		
-		public function parse(text:String):String {
+		public function parse(text:String, remove:Boolean=false):String {
 			_text = text;
 			maxFontSize = 0;
 			
@@ -176,10 +178,10 @@ package fairygui.utils
 				func = _handlers[tag];
 				if(func!=null) {
 					repl = func(tag, end, attr);
-					if(repl!=null)
+					if(repl!=null && !remove)
 						result += repl;
 				}
-				else
+				else if(!unrecognizedTags[tag])
 					result += _text.substring(pos1, _readPos);
 				pos1 = _readPos;
 			}
